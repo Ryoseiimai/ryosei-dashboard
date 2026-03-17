@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RYOSEIWORLD — Advisor Chat</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ========== HEADER ========== */
+    header {
+      background: #111111;
+      border-bottom: 1px solid #1e1e1e;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .back-link {
+      color: #777;
+      text-decoration: none;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      border: 1px solid #2a2a2a;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+    }
+
+    .back-link:hover {
+      color: #ccc;
+      border-color: #444;
+    }
+
+    .header-title {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #f0f0f0;
+    }
+
+    .header-title span {
+      color: #4a6cf7;
+    }
+
+    /* ========== MAIN LAYOUT ========== */
+    main {
+      flex: 1;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 28px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ========== THEME BANNER ========== */
+    .theme-banner {
+      background: #111;
+      border: 1px solid #222;
+      border-left: 4px solid #4a6cf7;
+      border-radius: 8px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .theme-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #555;
+    }
+
+    .theme-text {
+      font-size: 17px;
+      font-weight: 600;
+      color: #e8e8e8;
+      line-height: 1.5;
+    }
+
+    .theme-date {
+      font-size: 12px;
+      color: #444;
+      margin-top: 2px;
+    }
+
+    /* ========== CHAT AREA ========== */
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-area-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #444;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #1a1a1a;
+    }
+
+    .message-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      animation: fadeIn 0.3s ease both;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .bubble-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      max-width: calc(100% - 52px);
+    }
+
+    .bubble-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .bubble-name {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .bubble {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 4px 12px 12px 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #d8d8d8;
+      word-break: break-word;
+    }
+
+    /* ========== CONCLUSIONS ========== */
+    .conclusions-section {
+      background: #0e0e0e;
+      border: 1px solid #2a2a2a;
+      border-top: 3px solid #ffd700;
+      border-radius: 8px;
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .conclusions-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .conclusions-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #ffd700;
+      letter-spacing: 0.04em;
+    }
+
+    .conclusions-badge {
+      background: #ffd700;
+      color: #0a0a0a;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    .conclusions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      list-style: none;
+    }
+
+    .conclusions-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      font-size: 14px;
+      color: #e0e0e0;
+      line-height: 1.6;
+      padding: 10px 14px;
+      background: #141414;
+      border-radius: 6px;
+      border: 1px solid #222;
+    }
+
+    .conclusion-number {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      min-width: 22px;
+      background: #ffd700;
+      color: #0a0a0a;
+      font-size: 11px;
+      font-weight: 800;
+      border-radius: 50%;
+      margin-top: 1px;
+    }
+
+    /* ========== EMPTY STATE ========== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #444;
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      opacity: 0.4;
+    }
+
+    .empty-state-text {
+      font-size: 15px;
+    }
+
+    /* ========== LOADING ========== */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #444;
+      font-size: 14px;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      border: 2px solid #2a2a2a;
+      border-top-color: #4a6cf7;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* ========== SCROLLBAR ========== */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0a0a0a; }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="back-link" href="dashboard.html">&#8592; ダッシュボードに戻る</a>
+    <div class="header-title">RYOSEIWORLD — <span>Advisor Chat</span></div>
+  </header>
+
+  <main id="app">
+    <div class="loading">
+      <div class="spinner"></div>
+      <div>読み込み中...</div>
+    </div>
+  </main>
+
+  <script>
+    /* ===== COLOR MAP ===== */
+    const COLOR_MAP = {
+      'マーケAI':  '#4a6cf7',
+      'サム':      '#53d769',
+      'イーロン':  '#e94560',
+      'カルパシー': '#f0a030',
+      '孫正義':   '#ffd700',
+      '批判AI':   '#ff4444',
+      'ダリオ':   '#9b59b6',
+      'ジェンスン': '#2ecc71',
+    };
+
+    function getColor(name) {
+      return COLOR_MAP[name] || '#888888';
+    }
+
+    /* ===== RENDER ===== */
+    function renderTheme(theme, date) {
+      return `
+        <div class="theme-banner">
+          <div class="theme-label">会議テーマ</div>
+          <div class="theme-text">${escHtml(theme)}</div>
+          <div class="theme-date">${escHtml(date)}</div>
+        </div>
+      `;
+    }
+
+    function renderMessages(messages) {
+      if (!messages || messages.length === 0) return '';
+
+      const rows = messages.map((msg, i) => {
+        const color = getColor(msg.name);
+        const delay = Math.min(i * 0.04, 1);
+        return `
+          <div class="message-row" style="animation-delay:${delay}s">
+            <div class="avatar">${escHtml(msg.icon || '🤖')}</div>
+            <div class="bubble-wrap">
+              <div class="bubble-meta">
+                <span class="bubble-name" style="color:${color}">${escHtml(msg.name)}</span>
+              </div>
+              <div class="bubble">${escHtml(msg.text)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="chat-area">
+          <div class="chat-area-label">会議ログ — ${messages.length} 発言</div>
+          ${rows}
+        </div>
+      `;
+    }
+
+    function renderConclusions(conclusions) {
+      if (!conclusions || conclusions.length === 0) return '';
+
+      const items = conclusions.map((c, i) => `
+        <li>
+          <span class="conclusion-number">${i + 1}</span>
+          <span>${escHtml(c)}</span>
+        </li>
+      `).join('');
+
+      return `
+        <div class="conclusions-section">
+          <div class="conclusions-header">
+            <div class="conclusions-title">結論: 今すぐやる ${conclusions.length} つ</div>
+            <div class="conclusions-badge">ACTION</div>
+          </div>
+          <ul class="conclusions-list">${items}</ul>
+        </div>
+      `;
+    }
+
+    function renderEmpty() {
+      return `
+        <div class="empty-state">
+          <div class="empty-state-icon">💬</div>
+          <div class="empty-state-text">会議データがありません</div>
+        </div>
+      `;
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    /* ===== MAIN ===== */
+    async function init() {
+      const app = document.getElementById('app');
+
+      let data = null;
+
+      try {
+        const res = await fetch('./chat_data.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        data = await res.json();
+      } catch (err) {
+        console.warn('chat_data.json の読み込み失敗:', err);
+        app.innerHTML = renderEmpty();
+        return;
+      }
+
+      if (!data || (!data.messages?.length && !data.theme)) {
+        app.innerHTML = renderEmpty();
+        return;
+      }
+
+      app.innerHTML = [
+        renderTheme(data.theme || '（テーマ未設定）', data.date || ''),
+        renderMessages(data.messages || []),
+        renderConclusions(data.conclusions || []),
+      ].join('');
+    }
+
+    init();
+  </script>
+</body>
+</html>

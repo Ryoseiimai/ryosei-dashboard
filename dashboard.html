@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RYOSEIWORLD</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #0a0a0a;
+    color: #e0e0e0;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    padding: 16px 24px;
+    border-bottom: 2px solid #0f3460;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .header h1 {
+    font-size: 1.3em;
+    color: #fff;
+    letter-spacing: 2px;
+  }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .header .time {
+    color: #666;
+    font-size: 0.8em;
+  }
+  .last-updated {
+    font-size: 0.72em;
+    color: #444;
+  }
+  .pulse-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #53d769;
+    animation: pulse 2s infinite;
+    display: inline-block;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 0;
+    height: calc(100vh - 56px);
+  }
+
+  /* 左: タスクリスト */
+  .tasks-area {
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .tasks-area h2 {
+    font-size: 0.85em;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  .task-card {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 14px 16px;
+    transition: all 0.2s;
+  }
+  .task-card:hover { border-color: #3a3a3a; }
+
+  .task-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .task-title {
+    font-size: 0.95em;
+    font-weight: 600;
+  }
+  .task-meta {
+    font-size: 0.7em;
+    color: #555;
+  }
+
+  .task-result {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #0f1a0f;
+    border: 1px solid #1a3a1a;
+    border-radius: 6px;
+    font-size: 0.82em;
+    color: #b0d0b0;
+  }
+
+  .task-badge {
+    font-size: 0.7em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .badge-done { background: #1a1a3a; color: #4a6cf7; }
+  .badge-waiting { background: #2a2a2a; color: #666; }
+
+  .section-gap { margin-top: 24px; }
+
+  /* 右: サイドバー */
+  .sidebar {
+    background: #111;
+    border-left: 1px solid #1e1e1e;
+    padding: 14px;
+    overflow-y: auto;
+    font-size: 0.78em;
+  }
+  .sidebar-label {
+    color: #555;
+    font-size: 0.7em;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    margin-top: 0;
+  }
+  .sidebar-label-gap {
+    margin-top: 10px;
+  }
+
+  .member-mini {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 0;
+    border-bottom: 1px solid #1a1a1a;
+    font-size: 0.8em;
+  }
+  .member-mini .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .dot.on { background: #53d769; }
+  .dot.off { background: #333; }
+  .member-mini .name { color: #aaa; }
+  .member-mini .task-label { color: #555; font-size: 0.9em; margin-left: auto; }
+  .member-mini .task-label.active { color: #53d769; }
+
+  .schedule-item {
+    padding: 4px 0;
+  }
+  .schedule-item .stime { color: #e94560; font-weight: 600; }
+  .schedule-item .stitle { color: #aaa; }
+
+  .alert-item {
+    padding: 4px 0;
+  }
+  .alert-item .atime { color: #f0a030; font-weight: 600; }
+  .alert-item .atitle { color: #aaa; }
+
+  /* ローディング表示 */
+  .loading {
+    color: #444;
+    font-size: 0.85em;
+    padding: 20px;
+    text-align: center;
+  }
+
+  /* エラー表示 */
+  .error-banner {
+    background: #2a1a1a;
+    border: 1px solid #5a2a2a;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #e07070;
+    font-size: 0.78em;
+    margin-bottom: 12px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>RYOSEIWORLD <span class="pulse-dot"></span> <a href="issues_log.html" style="color:#f0a030; text-decoration:none; font-size:0.55em; vertical-align:middle; margin-left:12px;" title="課題シューティング履歴">&#9888; 課題</a> <a href="finance.html" style="color:#53d769; text-decoration:none; font-size:0.55em; vertical-align:middle; margin-left:8px;" title="瀬戸さんCFO 財務レポート">💰 財務</a></h1>
+  <div class="header-right">
+    <span class="last-updated" id="last-updated">読み込み中...</span>
+    <div class="time" id="clock"></div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- 左: タスク一覧 -->
+  <div class="tasks-area">
+
+    <div class="error-banner" id="error-banner">データ取得エラー。前回のデータを表示中。</div>
+
+    <h2>⏳ 涼晴アクション待ち</h2>
+    <div id="action-waiting-list"><div class="loading">読み込み中...</div></div>
+
+    <h2 class="section-gap">🔄 バックグラウンド作業中</h2>
+    <div id="background-running-list"><div class="loading">読み込み中...</div></div>
+
+    <h2 class="section-gap">✅ 完了（涼晴承認済み）</h2>
+    <div id="completed-list"><div class="loading">読み込み中...</div></div>
+
+    <h2 class="section-gap">📋 次のセッション</h2>
+    <div id="next-session-list"><div class="loading">読み込み中...</div></div>
+
+  </div>
+
+  <!-- 右: サイドバー -->
+  <div class="sidebar">
+
+    <div class="sidebar-label">INTERNAL</div>
+    <div id="members-internal"></div>
+
+    <div class="sidebar-label sidebar-label-gap">EXTERNAL AI（いつ使う？）</div>
+    <div id="members-external"></div>
+
+    <div class="sidebar-label sidebar-label-gap">ADVISORS <a href="chat_log.html" style="color:#4a6cf7; text-decoration:none; font-size:1.2em;" title="会議チャット履歴を見る">💬</a></div>
+    <div id="members-advisors"></div>
+
+    <div class="sidebar-label sidebar-label-gap">FRIENDS</div>
+    <div id="members-friends"></div>
+
+    <div class="sidebar-label sidebar-label-gap">TODAY</div>
+    <div id="today-list"></div>
+
+    <div class="sidebar-label sidebar-label-gap">ALERT</div>
+    <div id="alert-list"></div>
+
+  </div>
+</div>
+
+<script>
+// ========== 時計 ==========
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' }) +
+    ' ' + now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ========== データ描画 ==========
+function renderActionWaiting(items) {
+  const container = document.getElementById('action-waiting-list');
+  if (!items || items.length === 0) {
+    container.innerHTML = '<div class="task-card"><div class="task-top"><span class="task-title" style="color:#555;">なし</span></div></div>';
+    return;
+  }
+  container.innerHTML = items.map(item => {
+    const isDone = item.type === 'done';
+    const borderColor = isDone ? '#4a6cf7' : '#f0a030';
+    const opacity = isDone ? 'opacity:0.5;' : '';
+    const metaColor = isDone ? '#555' : '#f0a030';
+    return `
+      <div class="task-card" style="border-left:3px solid ${borderColor}; ${opacity}">
+        <div class="task-top">
+          <span class="task-title">${escHtml(item.title)}</span>
+          <span class="task-meta" style="color:${metaColor};">${escHtml(item.detail)}</span>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderBackgroundRunning(items) {
+  const container = document.getElementById('background-running-list');
+  if (!items || items.length === 0) {
+    container.innerHTML = '<div class="task-card" style="opacity:0.4;"><div class="task-top"><span class="task-title" style="color:#555;">稼働中のタスクなし</span></div></div>';
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <div class="task-card" style="border-left:3px solid #53d769;">
+      <div class="task-top">
+        <span class="task-title">${escHtml(item.icon)} ${escHtml(item.title)}</span>
+        <span class="task-meta" style="color:#53d769;">${escHtml(item.status)}</span>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function renderCompleted(items) {
+  const container = document.getElementById('completed-list');
+  if (!items || items.length === 0) {
+    container.innerHTML = '<div class="task-card"><div class="task-top"><span class="task-title" style="color:#555;">なし</span></div></div>';
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <div class="task-card">
+      <div class="task-top">
+        <span class="task-title">${escHtml(item.title)}</span>
+        <span class="task-meta">${escHtml(item.started)}開始 ・ ${escHtml(item.duration)}</span>
+      </div>
+      <div class="task-result">${escHtml(item.result)}</div>
+    </div>`
+  ).join('');
+}
+
+function renderNextSession(items) {
+  const container = document.getElementById('next-session-list');
+  if (!items || items.length === 0) {
+    container.innerHTML = '<div class="task-card"><div class="task-top"><span class="task-title" style="color:#555;">なし</span></div></div>';
+    return;
+  }
+  container.innerHTML = items.map(item => `
+    <div class="task-card">
+      <div class="task-top">
+        <span class="task-title">${escHtml(item.title)}</span>
+        <span class="task-badge badge-waiting">次回</span>
+      </div>
+    </div>`
+  ).join('');
+}
+
+function renderMembers(members) {
+  const groups = { internal: [], external: [], advisors: [], friends: [] };
+  (members || []).forEach(m => {
+    if (groups[m.group]) groups[m.group].push(m);
+  });
+
+  ['internal', 'external', 'advisors', 'friends'].forEach(group => {
+    const container = document.getElementById(`members-${group}`);
+    container.innerHTML = groups[group].map(m => {
+      const isActive = m.status === 'on';
+      const taskClass = isActive ? 'active' : '';
+      const tooltip = m.tooltip ? ` title="${escHtml(m.tooltip)}"` : '';
+      return `
+        <div class="member-mini"${tooltip}>
+          <span class="dot ${m.status}"></span>
+          <span class="name">${escHtml(m.name)}</span>
+          <span class="task-label ${taskClass}">${escHtml(m.task)}</span>
+        </div>`;
+    }).join('');
+  });
+}
+
+function renderToday(items) {
+  const container = document.getElementById('today-list');
+  container.innerHTML = (items || []).map(item => `
+    <div class="schedule-item">
+      <span class="stime">${escHtml(item.time)}</span>
+      <span class="stitle"> ${escHtml(item.title)}</span>
+    </div>`
+  ).join('');
+}
+
+function renderAlerts(items) {
+  const container = document.getElementById('alert-list');
+  container.innerHTML = (items || []).map(item => `
+    <div class="alert-item">
+      <span class="atime">${escHtml(item.time)}</span>
+      <span class="atitle"> ${escHtml(item.title)}</span>
+    </div>`
+  ).join('');
+}
+
+function escHtml(str) {
+  if (str === undefined || str === null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ========== データ取得 & ポーリング ==========
+let lastEtag = null;
+
+async function fetchAndRender() {
+  try {
+    const res = await fetch('dashboard_data.json?_=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    // エラーバナー非表示
+    document.getElementById('error-banner').style.display = 'none';
+
+    // 最終更新時刻
+    if (data.last_updated) {
+      const dt = new Date(data.last_updated);
+      const fmt = dt.toLocaleString('ja-JP', {
+        month: 'numeric', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+      document.getElementById('last-updated').textContent = '最終更新: ' + fmt;
+    }
+
+    renderActionWaiting(data.action_waiting);
+    renderBackgroundRunning(data.background_running);
+    renderCompleted(data.completed);
+    renderNextSession(data.next_session);
+    renderMembers(data.members);
+    renderToday(data.today);
+    renderAlerts(data.alerts);
+
+  } catch (e) {
+    document.getElementById('error-banner').style.display = 'block';
+    console.error('fetch error:', e);
+  }
+}
+
+// 初回即実行 → 5秒ごとにポーリング
+fetchAndRender();
+setInterval(fetchAndRender, 5000);
+</script>
+
+</body>
+</html>

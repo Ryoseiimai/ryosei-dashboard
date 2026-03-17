@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>瀬戸さんCFO — 財務レポート</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; }
+
+  .header {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    padding: 16px 24px;
+    border-bottom: 2px solid #0f3460;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .header h1 { font-size: 1.2em; color: #fff; }
+  .header .back { color: #4a6cf7; text-decoration: none; font-size: 0.85em; }
+  .header .updated { color: #555; font-size: 0.75em; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 20px; }
+  .grid-full { grid-column: 1 / -1; }
+
+  .card {
+    background: #141414; border: 1px solid #2a2a2a; border-radius: 10px; padding: 16px;
+  }
+  .card h2 { font-size: 0.85em; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+  /* 大きい数字 */
+  .big-num { font-size: 2.2em; font-weight: 700; line-height: 1.1; }
+  .big-sub { font-size: 0.75em; color: #666; margin-top: 4px; }
+  .red { color: #ff4444; }
+  .green { color: #53d769; }
+  .yellow { color: #f0a030; }
+  .blue { color: #4a6cf7; }
+
+  /* プログレスバー */
+  .bar-bg { background: #1a1a1a; border-radius: 6px; height: 20px; margin: 8px 0; overflow: hidden; position: relative; }
+  .bar-fill { height: 100%; border-radius: 6px; transition: width 0.5s; }
+  .bar-label { position: absolute; right: 8px; top: 2px; font-size: 0.7em; color: #999; }
+
+  /* テーブル */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
+  th { text-align: left; color: #555; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #2a2a2a; }
+  td { padding: 6px 8px; border-bottom: 1px solid #1a1a1a; }
+  tr:hover { background: #1a1a1a; }
+
+  .tag { font-size: 0.7em; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .tag-danger { background: #2a1a1a; color: #ff4444; }
+  .tag-warn { background: #2a2a1a; color: #f0a030; }
+  .tag-ok { background: #1a2a1a; color: #53d769; }
+  .tag-info { background: #1a1a2a; color: #4a6cf7; }
+
+  .timeline { padding-left: 16px; border-left: 2px solid #2a2a2a; }
+  .timeline-item { padding: 8px 0; }
+  .timeline-date { color: #f0a030; font-weight: 600; font-size: 0.85em; }
+  .timeline-text { color: #aaa; font-size: 0.82em; margin-top: 2px; }
+
+  .advice-box {
+    background: #0f1a0f; border: 1px solid #1a3a1a; border-radius: 8px;
+    padding: 12px 16px; margin-top: 12px; font-size: 0.85em; color: #b0d0b0; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>💰 瀬戸さんCFO — 財務レポート</h1>
+  </div>
+  <div style="display:flex; gap:16px; align-items:center;">
+    <span class="updated" id="last-updated"></span>
+    <a href="dashboard.html" class="back">&larr; ダッシュボード</a>
+  </div>
+</div>
+
+<div class="grid" id="content">
+
+  <!-- 今日使えるお金 -->
+  <div class="card">
+    <h2>今日使えるお金</h2>
+    <div class="big-num yellow" id="daily-budget">-</div>
+    <div class="big-sub">月の手残りを日割り計算</div>
+  </div>
+
+  <!-- 借金残高 -->
+  <div class="card">
+    <h2>借金残高</h2>
+    <div class="big-num red" id="total-debt">-</div>
+    <div class="big-sub" id="debt-sub"></div>
+  </div>
+
+  <!-- 月収 vs 月支出 バー -->
+  <div class="card grid-full">
+    <h2>月収 vs 月支出</h2>
+    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+      <span>月収 <strong class="green" id="monthly-income">-</strong></span>
+      <span>月支出 <strong class="red" id="monthly-expense">-</strong></span>
+    </div>
+    <div class="bar-bg">
+      <div class="bar-fill" id="expense-bar" style="background: linear-gradient(90deg, #ff4444, #f0a030); width:0%;"></div>
+      <span class="bar-label" id="bar-pct"></span>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:0.8em; color:#666; margin-top:4px;">
+      <span>手残り: <strong class="green" id="monthly-surplus">-</strong></span>
+      <span>タイ移住ライン: 月収40万</span>
+    </div>
+  </div>
+
+  <!-- 借金内訳 -->
+  <div class="card">
+    <h2>借金内訳</h2>
+    <table>
+      <thead><tr><th>借入先</th><th>残高</th><th>状態</th></tr></thead>
+      <tbody id="debt-table"></tbody>
+    </table>
+  </div>
+
+  <!-- 収入内訳 -->
+  <div class="card">
+    <h2>収入内訳</h2>
+    <table>
+      <thead><tr><th>収入源</th><th>金額</th><th>状態</th></tr></thead>
+      <tbody id="income-table"></tbody>
+    </table>
+    <h2 style="margin-top:16px;">支出内訳</h2>
+    <table>
+      <thead><tr><th>項目</th><th>金額</th></tr></thead>
+      <tbody id="expense-table"></tbody>
+    </table>
+  </div>
+
+  <!-- 支払いカレンダー -->
+  <div class="card">
+    <h2>直近の支払い・イベント</h2>
+    <div class="timeline" id="payment-timeline"></div>
+  </div>
+
+  <!-- 瀬戸さんのアドバイス -->
+  <div class="card">
+    <h2>瀬戸さんからの一言</h2>
+    <div class="advice-box" id="cfo-advice">読み込み中...</div>
+  </div>
+
+</div>
+
+<script>
+// === 財務データ（finance_data.jsonから取得） ===
+async function load() {
+  let data;
+  try {
+    const res = await fetch('finance_data.json?_=' + Date.now());
+    data = await res.json();
+  } catch(e) {
+    // フォールバック: インラインデータ
+    console.error(e);
+    return;
+  }
+
+  // 最終更新
+  document.getElementById('last-updated').textContent = '最終更新: ' + data.last_updated;
+
+  // 計算
+  const income = data.monthly_income_total;
+  const expense = data.monthly_expense_total;
+  const surplus = income - expense;
+  const today = new Date();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const daysLeft = daysInMonth - today.getDate() + 1;
+  const dailyBudget = Math.max(0, Math.floor(surplus / daysLeft));
+
+  // 今日使えるお金
+  document.getElementById('daily-budget').textContent = dailyBudget > 0 ? '¥' + dailyBudget.toLocaleString() + '/日' : '赤字';
+
+  // 借金
+  document.getElementById('total-debt').textContent = '¥' + data.total_debt.toLocaleString();
+  document.getElementById('debt-sub').textContent = '月返済: ¥' + data.monthly_repayment.toLocaleString() + ' / ' + data.debt_count + '件';
+
+  // 月収vs月支出
+  document.getElementById('monthly-income').textContent = '¥' + income.toLocaleString();
+  document.getElementById('monthly-expense').textContent = '¥' + expense.toLocaleString();
+  document.getElementById('monthly-surplus').textContent = '¥' + surplus.toLocaleString();
+  const pct = Math.min(100, Math.round(expense / income * 100));
+  document.getElementById('expense-bar').style.width = pct + '%';
+  document.getElementById('bar-pct').textContent = pct + '%使用';
+
+  // 借金テーブル
+  const dtb = document.getElementById('debt-table');
+  dtb.innerHTML = data.debts.map(d => `<tr><td>${d.name}</td><td class="red">¥${d.amount.toLocaleString()}</td><td><span class="tag ${d.tag_class}">${d.status}</span></td></tr>`).join('');
+
+  // 収入テーブル
+  const itb = document.getElementById('income-table');
+  itb.innerHTML = data.incomes.map(i => `<tr><td>${i.name}</td><td class="green">¥${i.amount.toLocaleString()}</td><td><span class="tag ${i.tag_class}">${i.status}</span></td></tr>`).join('');
+
+  // 支出テーブル
+  const etb = document.getElementById('expense-table');
+  etb.innerHTML = data.expenses.map(e => `<tr><td>${e.name}</td><td class="red">¥${e.amount.toLocaleString()}</td></tr>`).join('');
+
+  // 支払いカレンダー
+  const tl = document.getElementById('payment-timeline');
+  tl.innerHTML = data.upcoming.map(u => `<div class="timeline-item"><div class="timeline-date">${u.date}</div><div class="timeline-text">${u.text}</div></div>`).join('');
+
+  // 瀬戸さんアドバイス
+  document.getElementById('cfo-advice').innerHTML = data.cfo_advice;
+}
+
+load();
+setInterval(load, 30000); // 30秒ごと更新
+</script>
+</body>
+</html>

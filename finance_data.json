@@ -1,0 +1,38 @@
+{
+  "last_updated": "2026-03-17",
+  "total_debt": 8500000,
+  "monthly_repayment": 310000,
+  "debt_count": 8,
+  "monthly_income_total": 530000,
+  "monthly_expense_total": 434000,
+  "debts": [
+    { "name": "日本公庫", "amount": 1500000, "status": "リスケ済み（利息のみ）", "tag_class": "tag-info" },
+    { "name": "イオン", "amount": 1300000, "status": "返済中", "tag_class": "tag-danger" },
+    { "name": "AMEX", "amount": 1180000, "status": "返済中", "tag_class": "tag-danger" },
+    { "name": "プロミス", "amount": 1000000, "status": "返済中", "tag_class": "tag-danger" },
+    { "name": "その他", "amount": 2020000, "status": "要内訳確認", "tag_class": "tag-warn" },
+    { "name": "レイク", "amount": 500000, "status": "返済中", "tag_class": "tag-danger" },
+    { "name": "PayPay", "amount": 500000, "status": "返済中", "tag_class": "tag-danger" },
+    { "name": "aupay", "amount": 500000, "status": "返済中", "tag_class": "tag-danger" }
+  ],
+  "incomes": [
+    { "name": "Team RYU", "amount": 450000, "status": "毎月安定", "tag_class": "tag-ok" },
+    { "name": "ランサーズ", "amount": 80000, "status": "月8万ペース", "tag_class": "tag-warn" },
+    { "name": "AI研修", "amount": 0, "status": "営業中・受注ゼロ", "tag_class": "tag-danger" }
+  ],
+  "expenses": [
+    { "name": "借金返済", "amount": 310000 },
+    { "name": "家賃", "amount": 70000 },
+    { "name": "AU通信", "amount": 20000 },
+    { "name": "楽天", "amount": 4000 },
+    { "name": "Claude Max", "amount": 30000 }
+  ],
+  "upcoming": [
+    { "date": "3/18（明日）", "text": "⚠️ アイドマHD弁護士相談（¥96,250の回答）" },
+    { "date": "3/25頃", "text": "家賃 ¥70,000" },
+    { "date": "3/末", "text": "借金返済 ¥310,000" },
+    { "date": "3/末", "text": "Team RYU入金 ¥495,000（税込）" },
+    { "date": "4/1", "text": "Claude Max ¥30,000" }
+  ],
+  "cfo_advice": "涼晴、明日の弁護士相談が最重要。Grokレポートにもあったけど、アイドマの件だけじゃなく<strong>全借金の任意整理</strong>を相談してくれ。月31万の返済が15〜20万に圧縮できれば、手残りが月10万→20万に倍増する。<br><br>今月の手残り予測は約<strong>9.6万円</strong>。余裕はない。新規の出費は控えて。<br><br>あと「その他202万」の内訳がまだ不明。これも弁護士に全部出して整理してもらうこと。"
+}

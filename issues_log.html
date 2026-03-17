@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>課題シューティング履歴 — RYOSEIWORLD</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0a0a0a; color: #e0e0e0; min-height: 100vh; padding: 20px; }
+  h1 { font-size: 1.3em; color: #fff; margin-bottom: 8px; }
+  .subtitle { color: #555; font-size: 0.8em; margin-bottom: 24px; }
+  .back-link { color: #4a6cf7; text-decoration: none; font-size: 0.85em; }
+  .back-link:hover { text-decoration: underline; }
+
+  .issue-card {
+    background: #141414;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    border-left: 3px solid #555;
+  }
+  .issue-card.resolved { border-left-color: #53d769; opacity: 0.7; }
+  .issue-card.open { border-left-color: #f0a030; }
+  .issue-card.critical { border-left-color: #ff4444; }
+
+  .issue-top { display: flex; justify-content: space-between; align-items: center; }
+  .issue-title { font-size: 0.95em; font-weight: 600; }
+  .issue-meta { font-size: 0.7em; color: #555; }
+  .issue-detail { margin-top: 8px; font-size: 0.82em; color: #999; line-height: 1.5; }
+
+  .badge { font-size: 0.65em; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+  .badge-resolved { background: #1a2a1a; color: #53d769; }
+  .badge-open { background: #2a2a1a; color: #f0a030; }
+  .badge-critical { background: #2a1a1a; color: #ff4444; }
+
+  .section-title { font-size: 0.85em; color: #555; text-transform: uppercase; letter-spacing: 1px; margin: 24px 0 12px; }
+</style>
+</head>
+<body>
+
+<a href="dashboard.html" class="back-link">&larr; ダッシュボードに戻る</a>
+<h1>課題シューティング履歴</h1>
+<p class="subtitle">今日の課題と解決状況。セッションが消えてもここに残る。</p>
+
+<div class="section-title">未解決</div>
+
+<div class="issue-card critical">
+  <div class="issue-top">
+    <span class="issue-title">アイドマHD 弁護士相談（3/18）</span>
+    <span class="badge badge-critical">緊急</span>
+  </div>
+  <div class="issue-detail">¥96,250の請求。明日弁護士に相談して回答が必要。準備は未着手。</div>
+</div>
+
+<div class="issue-card open">
+  <div class="issue-top">
+    <span class="issue-title">Team RYU Phase1 進捗5%（3/31締切）</span>
+    <span class="badge badge-open">要対応</span>
+  </div>
+  <div class="issue-detail">期限切れタスク多数。フローツリー未作成。あと2週間で残り95%。</div>
+</div>
+
+<div class="issue-card open">
+  <div class="issue-top">
+    <span class="issue-title">AIエージェント研修 受注ゼロ</span>
+    <span class="badge badge-open">要対応</span>
+  </div>
+  <div class="issue-detail">LP閲覧数が低い。パッケージ閲覧0回。営業チャネルの見直しが必要。</div>
+</div>
+
+<div class="issue-card open">
+  <div class="issue-top">
+    <span class="issue-title">ランサーズ #5436990 提出エラー</span>
+    <span class="badge badge-open">再トライ中</span>
+  </div>
+  <div class="issue-detail">「計画の詳細」未入力で必須エラー。バックグラウンドで再提出中。</div>
+</div>
+
+<div class="issue-card open">
+  <div class="issue-top">
+    <span class="issue-title">セッション消失でログが消える</span>
+    <span class="badge badge-open">調査中</span>
+  </div>
+  <div class="issue-detail">Claude Codeのセッションが切れると作業ログが全部消える。永続化方法を調査中。</div>
+</div>
+
+<div class="section-title">解決済み（3/17）</div>
+
+<div class="issue-card resolved">
+  <div class="issue-top">
+    <span class="issue-title">ブラウザが前面にポップアップする</span>
+    <span class="badge badge-resolved">解決</span>
+  </div>
+  <div class="issue-detail">Playwrightがheadless=Falseで動いてた → headless=True固定。rules/06に記録。涼晴に3回怒られた。</div>
+</div>
+
+<div class="issue-card resolved">
+  <div class="issue-top">
+    <span class="issue-title">Chrome「ページを復元しますか」ダイアログ</span>
+    <span class="badge badge-resolved">解決</span>
+  </div>
+  <div class="issue-detail">Chrome Preferences の exit_type を "Normal" に変更。次回起動から出なくなる。</div>
+</div>
+
+<div class="issue-card resolved">
+  <div class="issue-top">
+    <span class="issue-title">太陽と虎 欠席メール未送信</span>
+    <span class="badge badge-resolved">解決</span>
+  </div>
+  <div class="issue-detail">Gmail MCPに送信機能がなく下書きしかできなかった → Python Gmail API直接送信で解決。</div>
+</div>
+
+<div class="issue-card resolved">
+  <div class="issue-top">
+    <span class="issue-title">金山先生キャンセルメール未送信</span>
+    <span class="badge badge-resolved">解決</span>
+  </div>
+  <div class="issue-detail">同上。API直接送信で完了。</div>
+</div>
+
+<div class="issue-card resolved">
+  <div class="issue-top">
+    <span class="issue-title">LINE誤送信（別の人に送った）</span>
+    <span class="badge badge-resolved">解決</span>
+  </div>
+  <div class="issue-detail">PyAutoGUIでLINE検索時にフルネーム指定せず別人に送信 → 「金子わたる」フルネーム検索で再送信。</div>
+</div>
+
+<div class="issue-card resolved">
+  <div class="issue-top">
+    <span class="issue-title">ダッシュボード自動更新がない</span>
+    <span class="badge badge-resolved">解決</span>
+  </div>
+  <div class="issue-detail">dashboard_data.json + 5秒ポーリングで自動更新システム構築。JSONを変えるだけで反映。</div>
+</div>
+
+<div class="issue-card resolved">
+  <div class="issue-top">
+    <span class="issue-title">Gmail下書き修正ではなく新規作成してしまう</span>
+    <span class="badge badge-resolved">解決</span>
+  </div>
+  <div class="issue-detail">MCPに下書き編集機能がない → 次回から既存下書きを開いて手動修正 or API直接送信。</div>
+</div>
+
+</body>
+</html>
