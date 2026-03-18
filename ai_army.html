@@ -1,0 +1,1030 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RYOSEIWORLD AI組織 ライブビュー</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  color: #eee;
+  font-family: 'DotGothic16', 'Courier New', monospace;
+  overflow: hidden;
+  height: 100vh;
+  image-rendering: pixelated;
+}
+
+/* ========== ヘッダー（DQ風メニューバー） ========== */
+#header {
+  background: #0f0f23;
+  border-bottom: 3px solid #4a4a8a;
+  padding: 6px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 44px;
+  z-index: 100;
+}
+#header h1 {
+  font-size: 15px;
+  color: #ffd700;
+  letter-spacing: 3px;
+  text-shadow: 2px 2px 0 #333;
+}
+#header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.header-btn {
+  color: #aaffaa;
+  text-decoration: none;
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 2px solid #aaffaa;
+  border-radius: 2px;
+  background: rgba(0,255,0,0.05);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.header-btn:hover { background: rgba(0,255,0,0.15); }
+#sync-status {
+  font-size: 11px;
+  color: #7fff7f;
+}
+#sync-status::before {
+  content: '';
+  display: inline-block;
+  width: 7px; height: 7px;
+  background: #7fff7f;
+  border-radius: 50%;
+  margin-right: 5px;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ========== メインレイアウト ========== */
+#main {
+  display: flex;
+  height: calc(100vh - 44px);
+}
+
+/* ========== マップエリア ========== */
+#map-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+#map-canvas { width: 100%; height: 100%; }
+#overlays { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+/* ========== DQ風吹き出し（ウィンドウ） ========== */
+.bubble {
+  position: absolute;
+  background: #0a0a2e;
+  border: 3px solid #fff;
+  border-radius: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #fff;
+  max-width: 200px;
+  pointer-events: none;
+  animation: dqOpen 0.15s steps(3);
+  z-index: 50;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+  line-height: 1.5;
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 16px;
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 10px solid #fff;
+}
+@keyframes dqOpen {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+/* 会議サークル */
+.meeting-circle {
+  position: absolute;
+  border: 3px solid #ffd700;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: meetingGlow 2s infinite;
+}
+@keyframes meetingGlow {
+  0%,100% { box-shadow: 0 0 10px rgba(255,215,0,0.3); opacity:0.5; }
+  50% { box-shadow: 0 0 25px rgba(255,215,0,0.6); opacity:1; }
+}
+.meeting-label {
+  position: absolute;
+  font-size: 11px;
+  color: #ffd700;
+  text-align: center;
+  pointer-events: none;
+  text-shadow: 1px 1px 0 #000;
+}
+
+/* ========== サイドパネル（DQ風ウィンドウ） ========== */
+#side-panel {
+  width: 370px;
+  background: #0a0a2e;
+  border-left: 3px solid #fff;
+  display: flex;
+  flex-direction: column;
+}
+#member-detail {
+  display: none;
+  padding: 10px 12px;
+  background: #0a0a2e;
+  border-bottom: 2px solid #888;
+}
+#member-detail.show { display: block; }
+#member-detail h3 { font-size: 14px; color: #ffd700; }
+#member-detail .detail-role { font-size: 11px; color: #aaa; }
+#member-detail .detail-status { font-size: 12px; color: #7fff7f; margin-top: 3px; }
+
+/* タブ */
+#side-tabs {
+  display: flex;
+  background: #0f0f23;
+  border-bottom: 2px solid #888;
+}
+#side-tabs button {
+  flex: 1;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  color: #666;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+#side-tabs button.active {
+  color: #ffd700;
+  border-bottom-color: #ffd700;
+}
+#side-tabs button:hover { color: #fff; }
+
+/* フィルター */
+#filter-bar {
+  padding: 6px 8px;
+  background: #0f0f23;
+  border-bottom: 1px solid #333;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.filter-chip {
+  padding: 2px 7px;
+  border: 1px solid #555;
+  font-size: 10px;
+  cursor: pointer;
+  background: transparent;
+  color: #888;
+  font-family: inherit;
+}
+.filter-chip.active {
+  background: #2a2a5e;
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+/* ログ */
+#log-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+#log-container::-webkit-scrollbar { width: 5px; }
+#log-container::-webkit-scrollbar-thumb { background: #555; }
+.log-entry {
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: #0f0f23;
+  border: 1px solid #333;
+  font-size: 11px;
+  animation: logSlide 0.2s ease;
+}
+@keyframes logSlide {
+  from { opacity:0; transform:translateX(10px); }
+  to { opacity:1; transform:translateX(0); }
+}
+.log-entry .log-time { color: #666; font-size: 10px; }
+.log-entry .log-name { font-weight: bold; margin: 1px 0; }
+.log-entry .log-msg { color: #ccc; line-height: 1.4; }
+.log-entry.meeting { border-left: 3px solid #ffd700; }
+.log-entry.task { border-left: 3px solid #7fff7f; }
+.log-entry.think { border-left: 3px solid #6bb8ff; }
+.log-entry.real { border-left: 3px solid #ff6b9d; background: #1a0f1a; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>RYOSEIWORLD AI ARMY</h1>
+  <div id="header-right">
+    <a href="http://127.0.0.1:8765/dashboard.html" class="header-btn">📊 ダッシュボードに戻る</a>
+    <span id="sync-status">SYSTEM ACTIVE</span>
+  </div>
+</div>
+
+<div id="main">
+  <div id="map-area">
+    <canvas id="map-canvas"></canvas>
+    <div id="overlays"></div>
+  </div>
+  <div id="side-panel">
+    <div id="member-detail"></div>
+    <div id="side-tabs">
+      <button class="active" onclick="switchTab('all')">全ログ</button>
+      <button onclick="switchTab('meeting')">会議</button>
+      <button onclick="switchTab('task')">タスク</button>
+      <button onclick="switchTab('think')">独り言</button>
+    </div>
+    <div id="filter-bar"></div>
+    <div id="log-container"></div>
+  </div>
+</div>
+
+<script>
+// ========== メンバー定義 ==========
+const MEMBERS = [
+  { id:'ryosei', name:'RYOSEI社長', emoji:'🤖', color:'#c8b8ff', role:'社長・全体統括', team:'経営', spriteColor:'#8866cc' },
+  { id:'eigyo', name:'営業AI', emoji:'🎯', color:'#ff9f43', role:'案件獲得・提案', team:'攻撃', spriteColor:'#cc7733' },
+  { id:'marke', name:'マーケAI', emoji:'📱', color:'#ff6b9d', role:'SNS・記事・拡散', team:'攻撃', spriteColor:'#cc4466' },
+  { id:'seto', name:'瀬戸さん(CFO)', emoji:'💰', color:'#ffd700', role:'数字管理・ROI', team:'経営', spriteColor:'#ccaa00' },
+  { id:'bantou', name:'番頭', emoji:'📋', color:'#6bffb8', role:'進捗・タスク管理', team:'管理', spriteColor:'#44aa77' },
+  { id:'shinpan', name:'審判AI', emoji:'⚖️', color:'#ff4757', role:'品質チェック', team:'守備', spriteColor:'#cc3344' },
+  { id:'houmu', name:'法務AI', emoji:'📜', color:'#a0a0a0', role:'契約・法律(非常勤)', team:'非常勤', spriteColor:'#777777' },
+  { id:'akira', name:'あきら(Eng)', emoji:'💻', color:'#6bb8ff', role:'エンジニア', team:'実行', spriteColor:'#3388cc' },
+  { id:'hiro', name:'ひろゆき(Eng)', emoji:'🔧', color:'#b86bff', role:'エンジニア', team:'実行', spriteColor:'#7744cc' },
+];
+
+// ========== タイルマップ定義（ドラクエ風） ==========
+// 0=草, 1=石畳, 2=壁, 3=木の床, 4=水, 5=花, 6=本棚, 7=机
+const TILE_SIZE = 24;
+const MAP_W = 34, MAP_H = 24;
+
+// タイルの色パレット（ドラクエ風ドット絵）
+const TILE_COLORS = {
+  0: { base:'#2d5a1e', detail:'#3a6e28' },  // 草
+  1: { base:'#6a6a7a', detail:'#7a7a8a' },  // 石畳
+  2: { base:'#4a3a2a', detail:'#5a4a3a' },  // 壁
+  3: { base:'#8a6a3a', detail:'#9a7a4a' },  // 木の床
+  4: { base:'#2244aa', detail:'#3355bb' },  // 水
+  5: { base:'#2d5a1e', detail:'#ff6b9d' },  // 花
+  6: { base:'#5a3a1a', detail:'#4a2a0a' },  // 本棚
+  7: { base:'#7a5a3a', detail:'#6a4a2a' },  // 机
+};
+
+// 部屋定義（タイル座標）
+const ROOMS = [
+  { name:'社長室', tx:1, ty:1, tw:7, th:5, floor:3, wallColor:'#4a3060' },
+  { name:'会議室', tx:10, ty:1, tw:9, th:6, floor:3, wallColor:'#304060' },
+  { name:'営業フロア', tx:21, ty:1, tw:8, th:5, floor:3, wallColor:'#604830' },
+  { name:'エンジニア部屋', tx:1, ty:8, tw:8, th:6, floor:3, wallColor:'#204050' },
+  { name:'管理室', tx:11, ty:9, tw:7, th:5, floor:3, wallColor:'#205040' },
+  { name:'レビュー室', tx:21, ty:8, tw:8, th:6, floor:3, wallColor:'#502020' },
+  { name:'休憩所', tx:11, ty:16, tw:8, th:5, floor:3, wallColor:'#303030' },
+];
+
+// 家具配置（タイル座標）
+const FURNITURE = [
+  { type:'desk', tx:3, ty:3 }, { type:'desk', tx:5, ty:3 },
+  { type:'desk', tx:13, ty:3 }, { type:'desk', tx:15, ty:3 }, { type:'desk', tx:17, ty:3 },
+  { type:'desk', tx:23, ty:3 }, { type:'desk', tx:25, ty:3 }, { type:'desk', tx:27, ty:3 },
+  { type:'desk', tx:3, ty:10 }, { type:'desk', tx:5, ty:10 }, { type:'desk', tx:7, ty:10 },
+  { type:'desk', tx:13, ty:11 }, { type:'desk', tx:15, ty:11 },
+  { type:'desk', tx:23, ty:10 }, { type:'desk', tx:25, ty:10 },
+  { type:'bookshelf', tx:1, ty:1 }, { type:'bookshelf', tx:7, ty:1 },
+  { type:'bookshelf', tx:1, ty:8 }, { type:'bookshelf', tx:8, ty:8 },
+  { type:'plant', tx:19, ty:1 }, { type:'plant', tx:29, ty:1 },
+  { type:'plant', tx:19, ty:16 },
+];
+
+// ========== 状態管理 ==========
+let canvas, ctx, overlays;
+let characters = [];
+let logs = [];
+let activeTab = 'all';
+let selectedMember = null;
+let memberFilters = new Set();
+let frameCount = 0;
+let tileMap = [];
+
+// ========== タイルマップ生成 ==========
+function generateTileMap() {
+  // 全部草で初期化
+  tileMap = Array.from({length: MAP_H}, () => Array(MAP_W).fill(0));
+
+  // 石畳の通路
+  for (let x = 0; x < MAP_W; x++) {
+    for (let y = 6; y <= 7; y++) tileMap[y][x] = 1;
+    for (let y = 14; y <= 15; y++) tileMap[y][x] = 1;
+  }
+  for (let y = 0; y < MAP_H; y++) {
+    tileMap[y][9] = 1;
+    tileMap[y][20] = 1;
+  }
+
+  // 部屋の床
+  ROOMS.forEach(r => {
+    for (let y = r.ty; y < r.ty + r.th; y++) {
+      for (let x = r.tx; x < r.tx + r.tw; x++) {
+        if (y >= 0 && y < MAP_H && x >= 0 && x < MAP_W) {
+          tileMap[y][x] = r.floor;
+        }
+      }
+    }
+  });
+
+  // 花をランダムに
+  for (let i = 0; i < 15; i++) {
+    const x = Math.floor(Math.random() * MAP_W);
+    const y = Math.floor(Math.random() * MAP_H);
+    if (tileMap[y][x] === 0) tileMap[y][x] = 5;
+  }
+
+  // 水（装飾用の池）
+  for (let x = 30; x < 33; x++) {
+    for (let y = 18; y < 21; y++) {
+      if (y < MAP_H && x < MAP_W) tileMap[y][x] = 4;
+    }
+  }
+}
+
+// ========== ドラクエ風タイル描画 ==========
+function drawTile(x, y, type) {
+  const px = x * TILE_SIZE;
+  const py = y * TILE_SIZE;
+  const t = TILE_COLORS[type] || TILE_COLORS[0];
+
+  ctx.fillStyle = t.base;
+  ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+  // ドット絵ディテール
+  ctx.fillStyle = t.detail;
+  if (type === 0) { // 草
+    ctx.fillRect(px+4, py+4, 2, 2);
+    ctx.fillRect(px+14, py+12, 2, 2);
+    ctx.fillRect(px+8, py+18, 2, 2);
+  } else if (type === 1) { // 石畳
+    ctx.strokeStyle = '#5a5a6a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px+1, py+1, TILE_SIZE/2-2, TILE_SIZE/2-2);
+    ctx.strokeRect(px+TILE_SIZE/2, py+TILE_SIZE/2, TILE_SIZE/2-1, TILE_SIZE/2-1);
+  } else if (type === 3) { // 木の床
+    ctx.fillRect(px, py+6, TILE_SIZE, 1);
+    ctx.fillRect(px, py+18, TILE_SIZE, 1);
+    ctx.fillRect(px+12, py, 1, TILE_SIZE);
+  } else if (type === 4) { // 水
+    const wave = Math.sin(frameCount * 0.03 + x + y) * 0.3;
+    ctx.globalAlpha = 0.4 + wave;
+    ctx.fillRect(px+2, py+8, 8, 2);
+    ctx.fillRect(px+12, py+14, 6, 2);
+    ctx.globalAlpha = 1;
+  } else if (type === 5) { // 花
+    ctx.fillRect(px+4, py+4, 2, 2);
+    ctx.fillRect(px+14, py+12, 2, 2);
+    ctx.fillStyle = '#ffee44';
+    ctx.fillRect(px+10, py+8, 3, 3);
+    ctx.fillStyle = '#ff4466';
+    ctx.fillRect(px+4, py+16, 3, 3);
+  }
+}
+
+// ========== 家具描画 ==========
+function drawFurniture() {
+  FURNITURE.forEach(f => {
+    const px = f.tx * TILE_SIZE;
+    const py = f.ty * TILE_SIZE;
+
+    if (f.type === 'desk') {
+      // ドラクエ風の机
+      ctx.fillStyle = '#8a6a3a';
+      ctx.fillRect(px+2, py+6, TILE_SIZE-4, TILE_SIZE-8);
+      ctx.fillStyle = '#a07a4a';
+      ctx.fillRect(px+3, py+7, TILE_SIZE-6, TILE_SIZE-10);
+      // 天板のハイライト
+      ctx.fillStyle = '#b08a5a';
+      ctx.fillRect(px+4, py+7, TILE_SIZE-8, 2);
+    } else if (f.type === 'bookshelf') {
+      ctx.fillStyle = '#5a3a1a';
+      ctx.fillRect(px+1, py+1, TILE_SIZE-2, TILE_SIZE-2);
+      // 本
+      ctx.fillStyle = '#cc3333';
+      ctx.fillRect(px+3, py+3, 4, 8);
+      ctx.fillStyle = '#3366cc';
+      ctx.fillRect(px+8, py+3, 4, 8);
+      ctx.fillStyle = '#33aa33';
+      ctx.fillRect(px+13, py+3, 4, 8);
+      ctx.fillStyle = '#ccaa33';
+      ctx.fillRect(px+3, py+13, 4, 7);
+      ctx.fillStyle = '#aa33aa';
+      ctx.fillRect(px+8, py+13, 4, 7);
+    } else if (f.type === 'plant') {
+      ctx.fillStyle = '#5a3a1a';
+      ctx.fillRect(px+8, py+16, 8, 6);
+      ctx.fillStyle = '#2d7a1e';
+      ctx.fillRect(px+4, py+4, 16, 14);
+      ctx.fillStyle = '#3a9a28';
+      ctx.fillRect(px+6, py+2, 12, 6);
+      ctx.fillRect(px+8, py+0, 8, 4);
+    }
+  });
+}
+
+// ========== 部屋の壁描画 ==========
+function drawRoomWalls() {
+  ROOMS.forEach(r => {
+    const px = r.tx * TILE_SIZE;
+    const py = r.ty * TILE_SIZE;
+    const pw = r.tw * TILE_SIZE;
+    const ph = r.th * TILE_SIZE;
+
+    // 壁
+    ctx.strokeStyle = r.wallColor;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(px-1, py-1, pw+2, ph+2);
+
+    // 壁の上部ハイライト
+    ctx.strokeStyle = '#fff';
+    ctx.globalAlpha = 0.15;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(px+pw, py);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    // 部屋名（DQ風ウィンドウ）
+    const nameW = r.name.length * 13 + 16;
+    ctx.fillStyle = '#0a0a2e';
+    ctx.fillRect(px+4, py-14, nameW, 16);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px+4, py-14, nameW, 16);
+    ctx.fillStyle = '#ffd700';
+    ctx.font = '11px "DotGothic16", monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(r.name, px+10, py-3);
+  });
+}
+
+// ========== ドラクエ風キャラクター ==========
+class Character {
+  constructor(member, tx, ty) {
+    this.member = member;
+    this.x = tx * TILE_SIZE + TILE_SIZE/2;
+    this.y = ty * TILE_SIZE + TILE_SIZE/2;
+    this.targetX = this.x;
+    this.targetY = this.y;
+    this.speed = 0.8 + Math.random() * 0.4;
+    this.frame = 0;
+    this.direction = 0; // 0=down, 1=left, 2=right, 3=up
+    this.state = 'idle';
+    this.stateTimer = 0;
+    this.homeRoom = null;
+    this.currentRoom = null;
+    this.bubble = null;
+    this.bubbleTimer = 0;
+    this.walkFrame = 0;
+    this.currentTask = ''; // 担当中のタスク名
+  }
+
+  update() {
+    this.frame++;
+
+    // 作業中・会議中は動かない
+    if (this.state === 'working' || this.state === 'meeting') {
+      this.stateTimer--;
+      if (this.stateTimer <= 0) {
+        this.state = 'idle';
+        this.currentTask = '';
+        this.decideNextAction();
+      }
+      if (this.bubbleTimer > 0) {
+        this.bubbleTimer--;
+        if (this.bubbleTimer <= 0) this.removeBubble();
+      }
+      return;
+    }
+
+    this.stateTimer--;
+    const dx = this.targetX - this.x;
+    const dy = this.targetY - this.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    if (dist > 2) {
+      this.state = 'walking';
+      this.x += (dx/dist) * this.speed;
+      this.y += (dy/dist) * this.speed;
+      this.walkFrame++;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        this.direction = dx > 0 ? 2 : 1;
+      } else {
+        this.direction = dy > 0 ? 0 : 3;
+      }
+    } else if (this.stateTimer <= 0) {
+      this.decideNextAction();
+    }
+
+    if (this.bubbleTimer > 0) {
+      this.bubbleTimer--;
+      if (this.bubbleTimer <= 0) this.removeBubble();
+    }
+  }
+
+  decideNextAction() {
+    const roll = Math.random();
+    if (roll < 0.12) {
+      // 部屋内移動
+      const room = this.findCurrentRoom();
+      if (room) {
+        this.targetX = (room.tx + 1 + Math.random() * (room.tw-2)) * TILE_SIZE;
+        this.targetY = (room.ty + 1 + Math.random() * (room.th-2)) * TILE_SIZE;
+      }
+      this.stateTimer = 80 + Math.random() * 120;
+    } else if (roll < 0.20) {
+      // 別の部屋に移動
+      const room = ROOMS[Math.floor(Math.random() * ROOMS.length)];
+      this.targetX = (room.tx + 1 + Math.random() * (room.tw-2)) * TILE_SIZE;
+      this.targetY = (room.ty + 1 + Math.random() * (room.th-2)) * TILE_SIZE;
+      this.stateTimer = 150 + Math.random() * 200;
+    } else if (roll < 0.55) {
+      // 作業中
+      this.state = 'working';
+      this.stateTimer = 250 + Math.random() * 350;
+      this.sayThought();
+    } else {
+      // idle
+      this.state = 'idle';
+      this.stateTimer = 180 + Math.random() * 200;
+    }
+  }
+
+  findCurrentRoom() {
+    const tx = Math.floor(this.x / TILE_SIZE);
+    const ty = Math.floor(this.y / TILE_SIZE);
+    for (const room of ROOMS) {
+      if (tx >= room.tx && tx < room.tx+room.tw && ty >= room.ty && ty < room.ty+room.th) {
+        this.currentRoom = room.name;
+        return room;
+      }
+    }
+    return ROOMS[0];
+  }
+
+  sayThought() {
+    const thoughts = getThoughtsForMember(this.member.id);
+    const msg = thoughts[Math.floor(Math.random() * thoughts.length)];
+    this.currentTask = msg;
+    this.showBubble(msg);
+    addLog(this.member, msg, 'think');
+  }
+
+  showBubble(text) {
+    this.removeBubble();
+    const div = document.createElement('div');
+    div.className = 'bubble';
+    div.textContent = text;
+    overlays.appendChild(div);
+    this.bubble = div;
+    this.bubbleTimer = 200;
+  }
+
+  removeBubble() {
+    if (this.bubble) { this.bubble.remove(); this.bubble = null; }
+  }
+
+  draw(ctx) {
+    const px = Math.round(this.x);
+    const py = Math.round(this.y);
+    const S = TILE_SIZE; // スプライトサイズ
+    const c = this.member.spriteColor;
+
+    // 影
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(px, py+S/2+2, S*0.4, 3, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    // 歩行アニメフレーム
+    const step = this.state === 'walking' ? Math.floor(this.walkFrame / 8) % 4 : 0;
+    const bob = this.state === 'walking' ? (step % 2 === 0 ? 0 : -2) : 0;
+
+    // === ドラクエ風16x16スプライト描画 ===
+    const ox = px - 8; // 左上原点
+    const oy = py - 12 + bob;
+    const p = 2; // ピクセルサイズ
+
+    // 髪・頭
+    ctx.fillStyle = c;
+    // 頭部
+    ctx.fillRect(ox+2*p, oy+0*p, 4*p, 1*p);
+    ctx.fillRect(ox+1*p, oy+1*p, 6*p, 1*p);
+    ctx.fillRect(ox+1*p, oy+2*p, 6*p, 1*p);
+
+    // 顔
+    ctx.fillStyle = '#ffccaa';
+    ctx.fillRect(ox+2*p, oy+3*p, 4*p, 2*p);
+
+    // 目
+    ctx.fillStyle = '#111';
+    if (this.direction !== 3) { // 後ろ向き以外
+      ctx.fillRect(ox+2*p, oy+3*p, 1*p, 1*p);
+      ctx.fillRect(ox+5*p, oy+3*p, 1*p, 1*p);
+    }
+
+    // 体
+    ctx.fillStyle = c;
+    ctx.globalAlpha = 0.9;
+    ctx.fillRect(ox+1*p, oy+5*p, 6*p, 3*p);
+    ctx.globalAlpha = 1;
+
+    // 腕
+    const armOff = step === 1 ? -1*p : step === 3 ? 1*p : 0;
+    ctx.fillStyle = c;
+    ctx.fillRect(ox+0*p, oy+5*p+armOff, 1*p, 2*p);
+    ctx.fillRect(ox+7*p, oy+5*p-armOff, 1*p, 2*p);
+
+    // 足
+    ctx.fillStyle = '#553322';
+    if (this.state === 'walking') {
+      const legL = step < 2 ? 0 : 1*p;
+      const legR = step < 2 ? 1*p : 0;
+      ctx.fillRect(ox+2*p, oy+8*p+legL, 2*p, 1*p);
+      ctx.fillRect(ox+4*p, oy+8*p+legR, 2*p, 1*p);
+    } else {
+      ctx.fillRect(ox+2*p, oy+8*p, 2*p, 1*p);
+      ctx.fillRect(ox+4*p, oy+8*p, 2*p, 1*p);
+    }
+
+    // 作業中エフェクト
+    if (this.state === 'working') {
+      const sparkle = Math.floor(this.frame / 10) % 4;
+      ctx.fillStyle = '#ffd700';
+      ctx.globalAlpha = 0.7;
+      if (sparkle === 0) ctx.fillRect(px+10, py-16, 3, 3);
+      if (sparkle === 1) ctx.fillRect(px+14, py-12, 3, 3);
+      if (sparkle === 2) ctx.fillRect(px+12, py-18, 3, 3);
+      if (sparkle === 3) ctx.fillRect(px+8, py-14, 3, 3);
+      ctx.globalAlpha = 1;
+    }
+
+    // 名前タグ（DQ風）
+    const name = this.member.emoji + this.member.name;
+    const tw = ctx.measureText(name).width;
+    ctx.fillStyle = 'rgba(10,10,46,0.8)';
+    ctx.fillRect(px - tw/2 - 4, py - 24, tw + 8, 14);
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(px - tw/2 - 4, py - 24, tw + 8, 14);
+    ctx.fillStyle = this.member.color;
+    ctx.font = '10px "DotGothic16", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(name, px, py - 14);
+
+    // タスクバッジ（担当タスク表示）
+    if (this.currentTask) {
+      const taskText = this.currentTask.length > 20 ? this.currentTask.substring(0,20)+'...' : this.currentTask;
+      ctx.font = '9px "DotGothic16", monospace';
+      const ttw = ctx.measureText(taskText).width;
+      ctx.fillStyle = 'rgba(0,40,0,0.85)';
+      ctx.fillRect(px - ttw/2 - 3, py + 14, ttw + 6, 12);
+      ctx.strokeStyle = '#7fff7f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px - ttw/2 - 3, py + 14, ttw + 6, 12);
+      ctx.fillStyle = '#7fff7f';
+      ctx.textAlign = 'center';
+      ctx.fillText(taskText, px, py + 23);
+    }
+
+    // 吹き出し位置更新
+    if (this.bubble) {
+      this.bubble.style.left = (px - 30) + 'px';
+      this.bubble.style.top = (py - 80) + 'px';
+    }
+  }
+}
+
+// ========== 独り言データ ==========
+function getThoughtsForMember(id) {
+  const T = {
+    ryosei: ['次の3時間で何を自動化するか...','Team Ryuの進捗、順調だな','タイ移住まであと少し...','ランサーズ新規案件チェック','涼晴が動かなくていい方法を考える','全メンバーの稼働率...98%か','AI研修の申し込み増えてきた'],
+    eigyo: ['新規案件3件、提案文下書き中','ランサーズにいい案件来てるな','この提案、もっと刺さる表現に','AIエージェント研修の問い合わせ来た','競合の提案文チェック中...','次のDM、20社に送る準備'],
+    marke: ['note記事のPV、昨日は240','TikTokのネタ3本ストック済み','バズる切り口...AI×日常か','noteの14トピック今週は研修系','インスタのリール明日公開'],
+    seto: ['今月の収支...Team Ryu 45万入金確認','借金返済ペース計算し直すか','ROI計算: 研修の利益率えげつない','キャッシュフロー予測更新中...','この支出、元取れんの？'],
+    bantou: ['タスク一覧更新中...','期限超過: 0件。よし','今日のTOP3アクション整理した','KPIダッシュボード全部グリーン','ランサーズ案件の納期チェック'],
+    shinpan: ['この提案文...ここが甘い','品質基準チェックリスト確認中','ファクトチェック: 数字合ってるか？','レビュー完了: 3件承認1件差し戻し','この表現、誤解を招く可能性あり'],
+    houmu: ['...zzZ（非常勤）','契約書テンプレート更新しとくか','業務委託の条項チェック中','呼ばれたら起きる...'],
+    akira: ['Claude APIのレスポンス最適化中','バグ見つけた、直す','デプロイスクリプト改良中...','GASのトリガー設定チェック','テスト書いてる...'],
+    hiro: ['インフラの監視スクリプト改良中','スプレッドシートAPI、レート制限対策','n8nのワークフロー整理中','パフォーマンス測定してる...'],
+  };
+  return T[id] || ['考え中...'];
+}
+
+// ========== 会議 ==========
+const MEETING_TOPICS = [
+  { title:'朝会', members:['ryosei','bantou','eigyo'], duration:300 },
+  { title:'営業戦略会議', members:['ryosei','eigyo','seto'], duration:400 },
+  { title:'品質レビュー', members:['shinpan','akira','marke'], duration:350 },
+  { title:'コスト会議', members:['seto','ryosei','bantou'], duration:300 },
+  { title:'技術検討', members:['akira','hiro','ryosei'], duration:400 },
+  { title:'コンテンツ企画', members:['marke','eigyo','ryosei'], duration:350 },
+  { title:'全体ミーティング', members:['ryosei','eigyo','marke','seto','bantou','shinpan'], duration:500 },
+];
+const MEETING_CONVOS = {
+  '営業戦略会議': [
+    {s:'ryosei',m:'今月の案件パイプラインどうなってる？'},{s:'eigyo',m:'ランサーズ3件、直営業2件進行中'},{s:'seto',m:'で、いくら確定してるの？'},{s:'eigyo',m:'確定45万、見込み含めると70万'},{s:'ryosei',m:'見込みを確定に変えるアクション3つ出して'},
+  ],
+  '品質レビュー': [
+    {s:'shinpan',m:'この提案文、3箇所修正が必要'},{s:'akira',m:'どこですか？'},{s:'shinpan',m:'数字の根拠が弱い。ソース追加して'},{s:'marke',m:'了解、データ付きで書き直します'},
+  ],
+  '技術検討': [
+    {s:'akira',m:'API呼び出しバッチ処理にした方が早い'},{s:'hiro',m:'レート制限考えるとキュー方式がいいかも'},{s:'ryosei',m:'一番シンプルな方でいこう'},
+  ],
+  'コンテンツ企画': [
+    {s:'marke',m:'今週のnoteテーマ「AI導入の失敗あるある」'},{s:'eigyo',m:'それ営業DMにも転用できる'},{s:'ryosei',m:'やれ。1記事から3アウトプット出せ'},
+  ],
+  'コスト会議': [
+    {s:'seto',m:'今月の支出、API費用15%増えてる'},{s:'ryosei',m:'売上に対するROIは？'},{s:'seto',m:'280%。問題なし。でも無駄は潰す'},
+  ],
+  '朝会': [
+    {s:'ryosei',m:'今日の優先事項3つ、番頭'},{s:'bantou',m:'1.ランサーズ提案 2.研修LP更新 3.note記事'},{s:'eigyo',m:'ランサーズは午前中に出します'},
+  ],
+  '全体ミーティング': [
+    {s:'ryosei',m:'全員、先週の成果を一言で'},{s:'eigyo',m:'新規2件獲得'},{s:'marke',m:'note 5記事公開、合計1200PV'},{s:'seto',m:'月収目標の85%達成'},{s:'bantou',m:'タスク完了率92%'},{s:'shinpan',m:'レビュー差し戻し率15%。品質上がってる'},
+  ],
+};
+
+function startMeeting() {
+  const topic = MEETING_TOPICS[Math.floor(Math.random() * MEETING_TOPICS.length)];
+  const room = ROOMS[1]; // 会議室
+  const cx = (room.tx + room.tw/2) * TILE_SIZE;
+  const cy = (room.ty + room.th/2) * TILE_SIZE;
+
+  const meetingChars = [];
+  topic.members.forEach((id, i) => {
+    const char = characters.find(c => c.member.id === id);
+    if (char) {
+      const angle = (Math.PI*2 / topic.members.length) * i;
+      char.targetX = cx + Math.cos(angle) * 35;
+      char.targetY = cy + Math.sin(angle) * 25;
+      char.state = 'meeting';
+      char.stateTimer = topic.duration;
+      meetingChars.push(char);
+    }
+  });
+
+  const circle = document.createElement('div');
+  circle.className = 'meeting-circle';
+  circle.style.left = (cx-50)+'px'; circle.style.top = (cy-45)+'px';
+  circle.style.width = '100px'; circle.style.height = '90px';
+  overlays.appendChild(circle);
+
+  const label = document.createElement('div');
+  label.className = 'meeting-label';
+  label.textContent = '⚔️ ' + topic.title;
+  label.style.left = (cx-55)+'px'; label.style.top = (cy-65)+'px'; label.style.width = '110px';
+  overlays.appendChild(label);
+
+  addLog({name:'SYSTEM',emoji:'⚔️',color:'#ffd700'}, `【${topic.title}】開始`, 'meeting');
+
+  const convos = MEETING_CONVOS[topic.title] || [];
+  convos.forEach((line, i) => {
+    setTimeout(() => {
+      const char = characters.find(c => c.member.id === line.s);
+      if (char) { char.showBubble(line.m); char.bubbleTimer = 180; }
+      addLog(MEMBERS.find(m=>m.id===line.s)||MEMBERS[0], `[${topic.title}] ${line.m}`, 'meeting');
+    }, 2500 + i*3500);
+  });
+
+  setTimeout(() => { circle.remove(); label.remove();
+    addLog({name:'SYSTEM',emoji:'✅',color:'#7fff7f'}, `【${topic.title}】終了`, 'meeting');
+  }, topic.duration * 16);
+}
+
+// ========== タスクイベント ==========
+const TASKS = [
+  {m:'eigyo',msg:'ランサーズ提案文を作成中...'},{m:'eigyo',msg:'営業DM 5通を送信準備完了'},
+  {m:'marke',msg:'note記事執筆中'},{m:'marke',msg:'TikTok台本3本ストック完了'},
+  {m:'akira',msg:'GASデプロイスクリプト更新'},{m:'akira',msg:'APIテスト実行中'},
+  {m:'hiro',msg:'ログ収集システム改良中'},{m:'hiro',msg:'n8nワークフロー更新'},
+  {m:'seto',msg:'月次収支レポート生成中...'},{m:'seto',msg:'キャッシュフロー予測更新'},
+  {m:'bantou',msg:'今週のKPIまとめ作成中'},{m:'bantou',msg:'タスク進捗をダッシュボードに反映'},
+  {m:'shinpan',msg:'提案文のファクトチェック中...'},{m:'shinpan',msg:'外部資料の品質レビュー完了'},
+  {m:'ryosei',msg:'全メンバーの稼働率チェック中'},{m:'ryosei',msg:'次の3時間のタスク自動生成'},
+];
+
+function triggerTask() {
+  const t = TASKS[Math.floor(Math.random()*TASKS.length)];
+  const char = characters.find(c=>c.member.id===t.m);
+  const mem = MEMBERS.find(m=>m.id===t.m);
+  if(char&&mem){char.state='working';char.stateTimer=250+Math.random()*200;char.currentTask=t.msg;char.showBubble(t.msg);char.bubbleTimer=220;addLog(mem,t.msg,'task');}
+}
+
+// ========== ログ ==========
+function addLog(member, msg, type) {
+  const now = new Date();
+  const ts = [now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+  logs.unshift({time:ts, member, msg, type, timestamp:Date.now()});
+  if (logs.length > 500) logs.pop();
+  renderLogs();
+}
+
+function renderLogs() {
+  const c = document.getElementById('log-container');
+  const f = logs.filter(l => {
+    if (activeTab!=='all' && l.type!==activeTab) return false;
+    if (memberFilters.size>0 && !memberFilters.has(l.member.id)) return false;
+    return true;
+  }).slice(0,50);
+  c.innerHTML = f.map(l=>`<div class="log-entry ${l.type}" style="border-left-color:${l.member.color||'#888'}"><div class="log-time">${l.time}</div><div class="log-name" style="color:${l.member.color||'#ccc'}">${l.member.emoji||''} ${l.member.name}</div><div class="log-msg">${l.msg}</div></div>`).join('');
+}
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('#side-tabs button').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderLogs();
+}
+
+function initFilters() {
+  const bar = document.getElementById('filter-bar');
+  MEMBERS.forEach(m => {
+    const chip = document.createElement('button');
+    chip.className = 'filter-chip';
+    chip.textContent = m.emoji + m.name.split('(')[0];
+    chip.onclick = () => {
+      memberFilters.has(m.id) ? (memberFilters.delete(m.id), chip.classList.remove('active')) : (memberFilters.add(m.id), chip.classList.add('active'));
+      renderLogs();
+    };
+    bar.appendChild(chip);
+  });
+}
+
+// ========== クリック ==========
+function handleClick(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  let clicked = null;
+  characters.forEach(c => { if (Math.sqrt((mx-c.x)**2+(my-c.y)**2)<20) clicked=c; });
+
+  const detail = document.getElementById('member-detail');
+  if (clicked) {
+    selectedMember = clicked.member;
+    detail.className = 'show';
+    const stLabel = clicked.state==='meeting'?'🔴 会議中':clicked.state==='working'?'🟡 作業中':clicked.state==='walking'?'🟢 移動中':'⚪ 待機中';
+    detail.innerHTML = `<h3>${clicked.member.emoji} ${clicked.member.name}</h3><div class="detail-role">${clicked.member.role} / ${clicked.member.team}チーム</div><div class="detail-status">状態: ${stLabel}</div><div style="font-size:11px;color:#888;margin-top:3px">場所: ${clicked.currentRoom||'外'}</div>`;
+    memberFilters.clear(); memberFilters.add(clicked.member.id);
+    document.querySelectorAll('.filter-chip').forEach((c,i)=>c.classList.toggle('active',MEMBERS[i].id===clicked.member.id));
+    renderLogs();
+  } else {
+    selectedMember=null; detail.className=''; detail.innerHTML='';
+    memberFilters.clear(); document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+    renderLogs();
+  }
+}
+
+// ========== スプレッドシート連携 ==========
+let LIVE_VIEW_API_URL = localStorage.getItem('liveViewApiUrl') || 'https://script.google.com/macros/s/AKfycbzSOxWuD3wJriJOaL6denNDYsK_hyeUroeYF2psWbwhL_pAMDXQOeCDeh4LziDJ6oIt/exec';
+
+window.setApiUrl = function(url) {
+  LIVE_VIEW_API_URL = url;
+  localStorage.setItem('liveViewApiUrl', url);
+  console.log('API URL設定完了:', url);
+  fetchRealData();
+};
+
+async function fetchRealData() {
+  if (!LIVE_VIEW_API_URL) {
+    try {
+      const res = await fetch('./live_data.json?' + Date.now());
+      if (res.ok) { processRealData(await res.json()); updateSync(true,'ローカル同期'); return; }
+    } catch(e) {}
+    updateSync(false,'シミュレーション中');
+    return;
+  }
+  try {
+    const res = await fetch(LIVE_VIEW_API_URL + '?action=all');
+    if (!res.ok) throw new Error('HTTP '+res.status);
+    processRealData(await res.json());
+    updateSync(true,'リアルタイム同期');
+  } catch(e) { console.warn('取得失敗:',e); updateSync(false,'オフライン'); }
+}
+
+function processRealData(data) {
+  if (data.logs) {
+    data.logs.slice(0,20).reverse().forEach(log => {
+      const mem = identifyMember(log.system, log.memo);
+      const msg = log.memo || log.status || log.system;
+      if (!msg || logs.some(l=>l.time===log.time && l.msg===msg)) return;
+      addLog(mem, `[実データ] ${msg}`, 'task');
+      const char = characters.find(c=>c.member.id===mem.id);
+      if(char){char.state='working';char.stateTimer=300;char.currentTask=msg.substring(0,40);char.showBubble(msg.substring(0,40));char.bubbleTimer=200;}
+    });
+  }
+  if (data.tasks) {
+    data.tasks.slice(0,10).forEach(task => {
+      if (!task.command) return;
+      const mem = identifyMember(task.target, task.command);
+      const se = task.status==='完了'?'✅':task.status==='下書き'?'📝':task.status==='処理中...'?'⏳':'📋';
+      if (!logs.some(l=>l.msg.includes(task.command.substring(0,30))))
+        addLog(mem, `${se} ${task.command.substring(0,80)}`, 'task');
+    });
+  }
+}
+
+function identifyMember(sys, txt) {
+  const c = ((sys||'')+' '+(txt||'')).toLowerCase();
+  const map = {
+    ryosei:['ryosei','社長','autopilot','processcommands'],eigyo:['営業','eigyo','lancers','ランサーズ','提案','dm'],
+    marke:['マーケ','note','tiktok','sns','記事'],seto:['瀬戸','cfo','収支','roi'],
+    bantou:['番頭','進捗','タスク','kpi'],shinpan:['審判','レビュー','品質','チェック'],
+    houmu:['法務','契約'],akira:['あきら','デプロイ','api','gas'],hiro:['ひろゆき','インフラ','n8n'],
+  };
+  for (const [id,kws] of Object.entries(map))
+    for (const kw of kws) if(c.includes(kw.toLowerCase())) return MEMBERS.find(m=>m.id===id)||MEMBERS[0];
+  return MEMBERS[0];
+}
+
+function updateSync(ok, label) {
+  const el = document.getElementById('sync-status');
+  el.textContent = label;
+  el.style.color = ok ? '#7fff7f' : '#ffaa00';
+}
+
+// ========== マップ描画 ==========
+function drawMap() {
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // タイル
+  for (let y=0; y<MAP_H; y++)
+    for (let x=0; x<MAP_W; x++)
+      drawTile(x, y, tileMap[y]?.[x] || 0);
+
+  drawRoomWalls();
+  drawFurniture();
+}
+
+// ========== メインループ ==========
+function init() {
+  canvas = document.getElementById('map-canvas');
+  ctx = canvas.getContext('2d');
+  overlays = document.getElementById('overlays');
+
+  function resize() {
+    const area = document.getElementById('map-area');
+    canvas.width = area.clientWidth;
+    canvas.height = area.clientHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  canvas.addEventListener('click', handleClick);
+
+  generateTileMap();
+
+  // キャラクター配置（タイル座標）
+  const starts = [
+    {tx:3,ty:3},{tx:23,ty:2},{tx:25,ty:3},{tx:5,ty:3},{tx:13,ty:11},
+    {tx:23,ty:10},{tx:13,ty:17},{tx:3,ty:10},{tx:5,ty:11},
+  ];
+  MEMBERS.forEach((m,i) => characters.push(new Character(m, starts[i].tx, starts[i].ty)));
+
+  initFilters();
+  addLog({name:'SYSTEM',emoji:'⚔️',color:'#ffd700'}, 'AI組織ライブビュー起動 — 全メンバー稼働中', 'task');
+
+  fetchRealData();
+  setInterval(fetchRealData, 60000);
+  setInterval(triggerTask, 12000 + Math.random()*8000);
+  setInterval(startMeeting, 50000 + Math.random()*40000);
+  setTimeout(startMeeting, 6000);
+
+  gameLoop();
+}
+
+function gameLoop() {
+  frameCount++;
+  drawMap();
+  characters.forEach(c=>{c.update();c.draw(ctx);});
+  requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>

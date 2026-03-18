@@ -1,0 +1,17 @@
+{
+  "logs": [
+    {"time": "2026-03-18 19:00", "system": "autoPilot", "status": "完了", "detail": "", "memo": "3件のタスクを自動生成"},
+    {"time": "2026-03-18 18:55", "system": "processCommands", "status": "完了", "detail": "", "memo": "2件処理完了"},
+    {"time": "2026-03-18 18:50", "system": "営業AI", "status": "実行中", "detail": "", "memo": "ランサーズ提案文を建設業向けに作成中"},
+    {"time": "2026-03-18 18:45", "system": "マーケAI", "status": "完了", "detail": "", "memo": "note記事「AI組織の裏側」下書き完了"},
+    {"time": "2026-03-18 18:40", "system": "審判AI", "status": "完了", "detail": "", "memo": "提案文レビュー完了: 2件承認、1件修正指示"},
+    {"time": "2026-03-18 18:35", "system": "瀬戸さんCFO", "status": "完了", "detail": "", "memo": "月次収支レポート更新: Team Ryu 45万入金確認"},
+    {"time": "2026-03-18 18:30", "system": "番頭", "status": "完了", "detail": "", "memo": "今週のKPIまとめ: タスク完了率92%"}
+  ],
+  "tasks": [
+    {"time": "2026-03-18 18:55", "command": "[autoPilot] 建設業向けAIエージェント研修の提案文作成", "target": "営業AI", "status": "下書き", "result": ""},
+    {"time": "2026-03-18 18:50", "command": "[autoPilot] note記事「中小企業がAI導入で失敗する3つの理由」作成", "target": "マーケAI", "status": "処理中...", "result": ""},
+    {"time": "2026-03-18 18:45", "command": "[autoPilot] 今週の営業パイプライン分析レポート", "target": "瀬戸さん", "status": "完了", "result": "Team Ryu 45万安定。新規AIエージェント研修の問い合わせ2件"}
+  ],
+  "timestamp": "2026-03-18T19:00:00+09:00"
+}
