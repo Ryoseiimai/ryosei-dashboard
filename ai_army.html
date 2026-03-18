@@ -247,7 +247,7 @@ body {
     <button id="panel-toggle" onclick="togglePanel()" style="position:absolute;right:0;top:50%;transform:translateY(-50%);z-index:90;background:#0a0a2e;border:2px solid #ffd700;color:#ffd700;font-size:18px;padding:16px 6px;cursor:pointer;font-family:inherit;border-radius:4px 0 0 4px;box-shadow:-2px 0 8px rgba(0,0,0,0.5);">◀</button>
   </div>
   <div id="side-panel">
-    <div id="member-roster" style="padding:8px;border-bottom:2px solid #888;background:#0a0a2e;max-height:200px;overflow-y:auto;"></div>
+    <div id="member-roster" style="padding:6px;border-bottom:2px solid #888;background:#0a0a2e;max-height:150px;overflow-y:auto;"></div>
     <div id="member-detail"></div>
     <div id="side-tabs">
       <button class="active" onclick="switchTab('all')">全ログ</button>
@@ -256,7 +256,7 @@ body {
       <button onclick="switchTab('output')">🏆成果物</button>
       <button onclick="switchTab('meeting')">会議</button>
     </div>
-    <div id="filter-bar"></div>
+    <div id="filter-bar" style="display:none"></div>
     <div id="log-container"></div>
   </div>
 </div>
@@ -1033,7 +1033,7 @@ function renderLogs() {
       const detail = item.detail || '';
       const needsReview = detail.includes('確認') || detail.includes('レビュー');
 
-      return `<div class="log-entry" style="border-left:3px solid ${needsReview ? '#ffd700' : '#53d769'};cursor:pointer" onclick="toggleOutputDetail(${idx})">
+      return `<div class="log-entry" style="border-left:3px solid ${needsReview ? '#ffd700' : '#53d769'};cursor:pointer;padding:10px 12px" onclick="toggleOutputDetail(${idx})">
         <div style="display:flex;justify-content:space-between;align-items:center">
           <div class="log-name" style="color:${color}">${member?member.emoji:'👤'} ${assignee}</div>
           <span style="font-size:10px;color:${needsReview?'#ffd700':'#53d769'}">${needsReview?'⚠️ 要確認':'✅ 完了'}</span>
