@@ -923,7 +923,22 @@ function startMeeting() {
   });
 
   setTimeout(() => { circle.remove(); label.remove();
-    addLog({name:'SYSTEM',emoji:'✅',color:'#7fff7f'}, `【${topic.title}】終了`, 'meeting');
+    // 議事録を生成
+    const minutes = {
+      title: topic.title,
+      time: new Date().toLocaleTimeString('ja-JP'),
+      members: topic.members.map(id => { const m = MEMBERS.find(m=>m.id===id); return m ? m.emoji+m.name : id; }),
+      discussions: convos.map(l => { const m = MEMBERS.find(m=>m.id===l.s); return { speaker: m?m.emoji+m.name:l.s, msg: l.m }; }),
+      conclusion: topic.title.includes('営業') ? '営業アクション3件確定' :
+                  topic.title.includes('品質') ? 'レビュー完了、修正指示あり' :
+                  topic.title.includes('コスト') ? 'コスト最適化案承認' :
+                  topic.title.includes('技術') ? '技術方針決定' :
+                  topic.title.includes('コンテンツ') ? 'コンテンツ計画確定' :
+                  topic.title.includes('全体') ? '全体方針確認、各自実行へ' : '議論完了'
+    };
+    meetingMinutes.unshift(minutes);
+    if (meetingMinutes.length > 20) meetingMinutes.pop();
+    addLog({name:'SYSTEM',emoji:'✅',color:'#7fff7f'}, `【${topic.title}】終了 — ${minutes.conclusion}`, 'meeting');
   }, topic.duration * 16);
 }
 
@@ -1053,6 +1068,30 @@ function renderLogs() {
     return;
   }
 
+  // 会議タブ → 議事録ビュー
+  if (activeTab === 'meeting') {
+    if (meetingMinutes.length === 0) {
+      c.innerHTML = '<div style="color:#666;text-align:center;padding:20px">まだ会議が開催されていません<br><span style="font-size:10px">しばらくすると自動で会議が始まります</span></div>';
+      return;
+    }
+    c.innerHTML = meetingMinutes.map((m, idx) => `
+      <div class="log-entry meeting" style="cursor:pointer;padding:10px 12px" onclick="document.getElementById('minutes-${idx}').style.display = document.getElementById('minutes-${idx}').style.display==='none'?'block':'none'">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="log-name" style="color:#ffd700">⚔️ ${m.title}</div>
+          <span style="font-size:10px;color:#888">${m.time}</span>
+        </div>
+        <div style="font-size:10px;color:#aaa;margin:2px 0">参加: ${m.members.join(', ')}</div>
+        <div style="font-size:11px;color:#7fff7f;margin-top:2px">結論: ${m.conclusion}</div>
+        <div id="minutes-${idx}" style="display:none;margin-top:6px;padding-top:6px;border-top:1px solid #333">
+          <div style="font-size:10px;color:#ffd700;margin-bottom:4px">📋 議事録</div>
+          ${m.discussions.map(d => `<div style="font-size:10px;margin:2px 0"><span style="color:#ccc">${d.speaker}:</span> <span style="color:#aaa">${d.msg}</span></div>`).join('')}
+          <div style="font-size:10px;color:#7fff7f;margin-top:4px;border-top:1px solid #222;padding-top:3px">✅ 結論: ${m.conclusion}</div>
+        </div>
+      </div>
+    `).join('');
+    return;
+  }
+
   // 通常のログ表示
   const f = logs.filter(l => {
     if (activeTab!=='all' && l.type!==activeTab) return false;
@@ -1153,6 +1192,7 @@ const ASSIGNEE_MAP = {
 
 let issueData = [];
 let outputData = [];
+let meetingMinutes = [];
 
 function toggleOutputDetail(idx) {
   const el = document.getElementById('output-detail-' + idx);
