@@ -214,7 +214,7 @@ body {
   background: #0f0f23;
   border: 1px solid #333;
   font-size: 11px;
-  animation: logSlide 0.2s ease;
+  /* animation removed - was causing shake on update */
 }
 @keyframes logSlide {
   from { opacity:0; transform:translateX(10px); }
@@ -1435,7 +1435,7 @@ function gameLoop() {
   frameCount++;
   drawMap();
   characters.forEach(c=>{c.update();c.draw(ctx);});
-  if (frameCount % 60 === 0) renderRoster();
+  if (frameCount % 180 === 0) renderRoster();
   requestAnimationFrame(gameLoop);
 }
 
