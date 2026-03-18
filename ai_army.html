@@ -234,7 +234,8 @@ body {
 <div id="header">
   <h1>RYOSEIWORLD AI ARMY</h1>
   <div id="header-right">
-    <a href="http://127.0.0.1:8765/dashboard.html" class="header-btn">📊 ダッシュボードに戻る</a>
+    <a href="dashboard.html" class="header-btn">📊 ダッシュボードに戻る</a>
+    <a href="https://docs.google.com/spreadsheets/d/1IjYkEzg2HKDU2KDPnqxlGKW9kkyw6LeKIi4vOe11Xec/edit" target="_blank" class="header-btn" style="color:#6bbbff;border-color:#6bbbff;">📋 シート</a>
     <span id="sync-status">SYSTEM ACTIVE</span>
   </div>
 </div>
@@ -243,14 +244,16 @@ body {
   <div id="map-area">
     <canvas id="map-canvas"></canvas>
     <div id="overlays"></div>
+    <button id="panel-toggle" onclick="togglePanel()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);z-index:90;background:#0a0a2e;border:2px solid #fff;color:#ffd700;font-size:16px;padding:8px 4px;cursor:pointer;font-family:inherit;border-radius:2px;">◀</button>
   </div>
   <div id="side-panel">
+    <div id="member-roster" style="padding:8px;border-bottom:2px solid #888;background:#0a0a2e;max-height:200px;overflow-y:auto;"></div>
     <div id="member-detail"></div>
     <div id="side-tabs">
       <button class="active" onclick="switchTab('all')">全ログ</button>
+      <button onclick="switchTab('task')">📝宿題</button>
+      <button onclick="switchTab('issue')">🔥課題</button>
       <button onclick="switchTab('meeting')">会議</button>
-      <button onclick="switchTab('task')">タスク</button>
-      <button onclick="switchTab('think')">独り言</button>
     </div>
     <div id="filter-bar"></div>
     <div id="log-container"></div>
@@ -260,15 +263,17 @@ body {
 <script>
 // ========== メンバー定義 ==========
 const MEMBERS = [
-  { id:'ryosei', name:'RYOSEI社長', emoji:'🤖', color:'#c8b8ff', role:'社長・全体統括', team:'経営', spriteColor:'#8866cc' },
-  { id:'eigyo', name:'営業AI', emoji:'🎯', color:'#ff9f43', role:'案件獲得・提案', team:'攻撃', spriteColor:'#cc7733' },
-  { id:'marke', name:'マーケAI', emoji:'📱', color:'#ff6b9d', role:'SNS・記事・拡散', team:'攻撃', spriteColor:'#cc4466' },
-  { id:'seto', name:'瀬戸さん(CFO)', emoji:'💰', color:'#ffd700', role:'数字管理・ROI', team:'経営', spriteColor:'#ccaa00' },
-  { id:'bantou', name:'番頭', emoji:'📋', color:'#6bffb8', role:'進捗・タスク管理', team:'管理', spriteColor:'#44aa77' },
-  { id:'shinpan', name:'審判AI', emoji:'⚖️', color:'#ff4757', role:'品質チェック', team:'守備', spriteColor:'#cc3344' },
-  { id:'houmu', name:'法務AI', emoji:'📜', color:'#a0a0a0', role:'契約・法律(非常勤)', team:'非常勤', spriteColor:'#777777' },
-  { id:'akira', name:'あきら(Eng)', emoji:'💻', color:'#6bb8ff', role:'エンジニア', team:'実行', spriteColor:'#3388cc' },
-  { id:'hiro', name:'ひろゆき(Eng)', emoji:'🔧', color:'#b86bff', role:'エンジニア', team:'実行', spriteColor:'#7744cc' },
+  { id:'ryosei', name:'RYOSEI社長', emoji:'🤖', color:'#c8b8ff', role:'社長・全体統括', team:'経営', spriteColor:'#8866cc', homeRoom:'社長室' },
+  { id:'eigyo', name:'営業AI', emoji:'🎯', color:'#ff9f43', role:'案件獲得・提案', team:'攻撃', spriteColor:'#cc7733', homeRoom:'営業フロア' },
+  { id:'marke', name:'マーケAI', emoji:'📱', color:'#ff6b9d', role:'SNS・記事・拡散', team:'攻撃', spriteColor:'#cc4466', homeRoom:'営業フロア' },
+  { id:'seto', name:'瀬戸さん(CFO)', emoji:'💰', color:'#ffd700', role:'数字管理・ROI', team:'経営', spriteColor:'#ccaa00', homeRoom:'社長室' },
+  { id:'bantou', name:'番頭', emoji:'📋', color:'#6bffb8', role:'進捗・タスク管理', team:'管理', spriteColor:'#44aa77', homeRoom:'管理室' },
+  { id:'shinpan', name:'審判AI', emoji:'⚖️', color:'#ff4757', role:'品質チェック', team:'守備', spriteColor:'#cc3344', homeRoom:'レビュー室' },
+  { id:'houmu', name:'法務AI', emoji:'📜', color:'#a0a0a0', role:'契約・法律(非常勤)', team:'非常勤', spriteColor:'#777777', homeRoom:'待機場' },
+  { id:'akira', name:'あきら(Eng)', emoji:'💻', color:'#6bb8ff', role:'エンジニア', team:'実行', spriteColor:'#3388cc', homeRoom:'エンジニア部屋' },
+  { id:'hiro', name:'ひろゆき(Eng)', emoji:'🔧', color:'#b86bff', role:'エンジニア', team:'実行', spriteColor:'#7744cc', homeRoom:'エンジニア部屋' },
+  { id:'shukudai', name:'宿題管理AI', emoji:'📝', color:'#e94560', role:'宿題整理・振り分け', team:'管理', spriteColor:'#aa3344', homeRoom:'管理室' },
+  { id:'kadai', name:'課題管理AI', emoji:'🔥', color:'#ff8c00', role:'課題起票・追跡', team:'管理', spriteColor:'#cc6600', homeRoom:'管理室' },
 ];
 
 // ========== タイルマップ定義（ドラクエ風） ==========
@@ -297,6 +302,7 @@ const ROOMS = [
   { name:'管理室', tx:11, ty:9, tw:7, th:5, floor:3, wallColor:'#205040' },
   { name:'レビュー室', tx:21, ty:8, tw:8, th:6, floor:3, wallColor:'#502020' },
   { name:'休憩所', tx:11, ty:16, tw:8, th:5, floor:3, wallColor:'#303030' },
+  { name:'待機場', tx:22, ty:16, tw:10, th:6, floor:1, wallColor:'#3a3a5a' },
 ];
 
 // 家具配置（タイル座標）
@@ -501,6 +507,7 @@ class Character {
     this.bubbleTimer = 0;
     this.walkFrame = 0;
     this.currentTask = ''; // 担当中のタスク名
+    this.homeworkList = []; // 担当宿題リスト
   }
 
   update() {
@@ -547,30 +554,79 @@ class Character {
   }
 
   decideNextAction() {
-    const roll = Math.random();
-    if (roll < 0.12) {
-      // 部屋内移動
-      const room = this.findCurrentRoom();
-      if (room) {
-        this.targetX = (room.tx + 1 + Math.random() * (room.tw-2)) * TILE_SIZE;
-        this.targetY = (room.ty + 1 + Math.random() * (room.th-2)) * TILE_SIZE;
+    // 宿題があるメンバーは必ず作業
+    if (this.homeworkList && this.homeworkList.length > 0) {
+      const hw = this.homeworkList[Math.floor(Math.random() * this.homeworkList.length)];
+      const home = ROOMS.find(r => r.name === this.member.homeRoom);
+      if (home) {
+        this.targetX = (home.tx + 1 + Math.random() * (home.tw-2)) * TILE_SIZE;
+        this.targetY = (home.ty + 1 + Math.random() * (home.th-2)) * TILE_SIZE;
       }
-      this.stateTimer = 80 + Math.random() * 120;
-    } else if (roll < 0.20) {
-      // 別の部屋に移動
-      const room = ROOMS[Math.floor(Math.random() * ROOMS.length)];
-      this.targetX = (room.tx + 1 + Math.random() * (room.tw-2)) * TILE_SIZE;
-      this.targetY = (room.ty + 1 + Math.random() * (room.th-2)) * TILE_SIZE;
-      this.stateTimer = 150 + Math.random() * 200;
-    } else if (roll < 0.55) {
-      // 作業中
+      this.state = 'working';
+      this.stateTimer = 300 + Math.random() * 400;
+      this.currentTask = hw.title;
+      this.showBubble(hw.title.substring(0, 30) + '...やってる');
+      this.bubbleTimer = 200;
+      addLog(this.member, `📝 ${hw.title} に取り組み中`, 'task');
+      return;
+    }
+
+    const roll = Math.random();
+    if (roll < 0.4) {
+      // 作業開始（宿題なしでも通常業務）
+      const home = ROOMS.find(r => r.name === this.member.homeRoom);
+      if (home) {
+        this.targetX = (home.tx + 1 + Math.random() * (home.tw-2)) * TILE_SIZE;
+        this.targetY = (home.ty + 1 + Math.random() * (home.th-2)) * TILE_SIZE;
+      }
       this.state = 'working';
       this.stateTimer = 250 + Math.random() * 350;
-      this.sayThought();
+      this.startTask();
     } else {
-      // idle
+      // 待機 → 宿題なしなら待機場、非常勤も待機場
+      const hasWork = this.member.team !== '非常勤';
+      const dest = hasWork
+        ? ROOMS.find(r => r.name === this.member.homeRoom)
+        : ROOMS.find(r => r.name === '待機場');
+      if (dest) {
+        this.targetX = (dest.tx + 1 + Math.random() * (dest.tw-2)) * TILE_SIZE;
+        this.targetY = (dest.ty + 1 + Math.random() * (dest.th-2)) * TILE_SIZE;
+      }
       this.state = 'idle';
-      this.stateTimer = 180 + Math.random() * 200;
+      this.currentTask = '';
+      this.removeBubble();
+      this.stateTimer = 200 + Math.random() * 300;
+    }
+  }
+
+  // タスクを取って、作業中にタスク内容を喋る
+  startTask() {
+    const tasks = getTasksForMember(this.member.id);
+    const task = tasks[Math.floor(Math.random() * tasks.length)];
+    this.currentTask = task.name;
+    // 作業開始時に一言
+    this.showBubble(task.start);
+    addLog(this.member, task.start, 'task');
+    // 作業途中で進捗報告
+    if (task.progress) {
+      setTimeout(() => {
+        if (this.state === 'working') {
+          this.showBubble(task.progress);
+          this.bubbleTimer = 180;
+          addLog(this.member, task.progress, 'think');
+        }
+      }, 3000 + Math.random() * 4000);
+    }
+    // 作業完了時に報告
+    const finishTime = (this.stateTimer * 16) - 500;
+    if (task.done) {
+      setTimeout(() => {
+        if (this.state === 'working') {
+          this.showBubble(task.done);
+          this.bubbleTimer = 200;
+          addLog(this.member, task.done, 'task');
+        }
+      }, Math.max(2000, finishTime));
     }
   }
 
@@ -587,11 +643,8 @@ class Character {
   }
 
   sayThought() {
-    const thoughts = getThoughtsForMember(this.member.id);
-    const msg = thoughts[Math.floor(Math.random() * thoughts.length)];
-    this.currentTask = msg;
-    this.showBubble(msg);
-    addLog(this.member, msg, 'think');
+    // startTaskに統合済み。フォールバック用
+    this.startTask();
   }
 
   showBubble(text) {
@@ -719,20 +772,76 @@ class Character {
   }
 }
 
-// ========== 独り言データ ==========
-function getThoughtsForMember(id) {
+// ========== タスクデータ（実際の業務に基づく発言） ==========
+function getTasksForMember(id) {
   const T = {
-    ryosei: ['次の3時間で何を自動化するか...','Team Ryuの進捗、順調だな','タイ移住まであと少し...','ランサーズ新規案件チェック','涼晴が動かなくていい方法を考える','全メンバーの稼働率...98%か','AI研修の申し込み増えてきた'],
-    eigyo: ['新規案件3件、提案文下書き中','ランサーズにいい案件来てるな','この提案、もっと刺さる表現に','AIエージェント研修の問い合わせ来た','競合の提案文チェック中...','次のDM、20社に送る準備'],
-    marke: ['note記事のPV、昨日は240','TikTokのネタ3本ストック済み','バズる切り口...AI×日常か','noteの14トピック今週は研修系','インスタのリール明日公開'],
-    seto: ['今月の収支...Team Ryu 45万入金確認','借金返済ペース計算し直すか','ROI計算: 研修の利益率えげつない','キャッシュフロー予測更新中...','この支出、元取れんの？'],
-    bantou: ['タスク一覧更新中...','期限超過: 0件。よし','今日のTOP3アクション整理した','KPIダッシュボード全部グリーン','ランサーズ案件の納期チェック'],
-    shinpan: ['この提案文...ここが甘い','品質基準チェックリスト確認中','ファクトチェック: 数字合ってるか？','レビュー完了: 3件承認1件差し戻し','この表現、誤解を招く可能性あり'],
-    houmu: ['...zzZ（非常勤）','契約書テンプレート更新しとくか','業務委託の条項チェック中','呼ばれたら起きる...'],
-    akira: ['Claude APIのレスポンス最適化中','バグ見つけた、直す','デプロイスクリプト改良中...','GASのトリガー設定チェック','テスト書いてる...'],
-    hiro: ['インフラの監視スクリプト改良中','スプレッドシートAPI、レート制限対策','n8nのワークフロー整理中','パフォーマンス測定してる...'],
+    ryosei: [
+      { name:'メンバー稼働チェック', start:'全員の稼働状況確認するぞ', progress:'営業AIは案件3つ進行中...OK', done:'稼働チェック完了。全員問題なし' },
+      { name:'autoPilot タスク生成', start:'次の3時間のタスクを考える', progress:'売上に一番近いボトルネックは...', done:'タスク3件生成。各メンバーに配布した' },
+      { name:'ランサーズ案件チェック', start:'ランサーズの新着案件見てくる', progress:'AI顧問の案件が2件来てるな', done:'案件チェック完了。1件営業AIに回した' },
+      { name:'全体進捗レビュー', start:'今週の全体進捗を見る', progress:'Team Ryuは順調。研修は要テコ入れ', done:'進捗レビュー完了。番頭にまとめ指示出した' },
+    ],
+    eigyo: [
+      { name:'ランサーズ提案文作成', start:'建設業向けの提案文書くか', progress:'「AI導入で月40時間削減」...これ刺さるな', done:'提案文完成。審判AIにレビュー出した' },
+      { name:'営業DM作成', start:'中小企業20社にDM準備開始', progress:'各社の課題に合わせてカスタマイズ中...', done:'DM 20通の下書き完了' },
+      { name:'案件フォローアップ', start:'先週の問い合わせにフォロー入れる', progress:'3社から返信あり。2社が興味あり', done:'フォロー完了。2社とZoom日程調整中' },
+      { name:'競合分析', start:'ランサーズの競合提案をチェック', progress:'この価格帯で差別化するには...', done:'競合分析完了。差別化ポイント3つ整理した' },
+    ],
+    marke: [
+      { name:'note記事執筆', start:'今日のnote記事書き始める', progress:'「AI導入の失敗あるある」...いい切り口だ', done:'note記事完成。下書き投稿した' },
+      { name:'TikTok台本作成', start:'TikTok用の台本3本作るか', progress:'30秒で伝わる構成にしないと...', done:'台本3本完成。撮影準備OK' },
+      { name:'SNS投稿スケジュール', start:'今週のSNS投稿計画立てる', progress:'note2本、TikTok3本、X5投稿...', done:'投稿スケジュール確定。カレンダーに入れた' },
+      { name:'PV分析', start:'先週のnote PVを分析する', progress:'「AI×実体験」系が伸びてるな', done:'分析完了。来週は体験談シリーズで行く' },
+    ],
+    seto: [
+      { name:'月次収支レポート', start:'今月の数字まとめるか', progress:'Team Ryu 45万入金確認...', done:'収支レポート完成。黒字だ' },
+      { name:'キャッシュフロー予測', start:'来月のキャッシュフロー計算する', progress:'固定費引いて...借金返済分引いて...', done:'予測完了。来月も回る' },
+      { name:'ROI分析', start:'各事業のROIを計算する', progress:'研修のROIがえげつない...利益率80%', done:'ROI分析完了。研修が一番効率いい' },
+      { name:'コスト最適化', start:'今月の支出を見直す', progress:'API費用が先月比15%増...', done:'削減案3つ出した。月5000円浮く' },
+    ],
+    bantou: [
+      { name:'タスク進捗更新', start:'全タスクの進捗を確認する', progress:'完了12件、進行中5件、未着手2件...', done:'進捗更新完了。完了率85%' },
+      { name:'KPIダッシュボード更新', start:'KPIダッシュボードを最新にする', progress:'売上、PV、案件数...全部グリーンだな', done:'ダッシュボード更新完了' },
+      { name:'期限チェック', start:'期限超過のタスクがないか確認', progress:'全部期限内...OK', done:'期限チェック完了。超過0件' },
+      { name:'週次レポート作成', start:'今週の週次レポート書く', progress:'成果、課題、来週のアクション...', done:'週次レポート完成。涼晴に送る' },
+    ],
+    shinpan: [
+      { name:'提案文レビュー', start:'営業AIの提案文をチェックする', progress:'この数字の根拠が弱い...修正指示出す', done:'レビュー完了。2箇所修正指示' },
+      { name:'note記事品質チェック', start:'マーケAIの記事をファクトチェック', progress:'事実確認中...この表現は問題ないか', done:'品質チェック完了。承認' },
+      { name:'外部資料レビュー', start:'クライアント向け資料を最終チェック', progress:'誤解を招く表現がないか...', done:'レビュー完了。1件修正して承認' },
+    ],
+    houmu: [
+      { name:'契約書チェック', start:'業務委託契約書のチェック開始', progress:'この条項、リスクがあるな...', done:'契約書チェック完了。2箇所修正推奨' },
+      { name:'利用規約更新', start:'利用規約を最新法改正に合わせる', progress:'個人情報保護法の改正点を確認中...', done:'利用規約更新完了' },
+    ],
+    akira: [
+      { name:'GASデプロイ', start:'コマンドセンターのGAS更新する', progress:'コード更新中...テスト実行...', done:'デプロイ完了。正常動作確認' },
+      { name:'API最適化', start:'Claude APIの呼び出しを最適化する', progress:'バッチ処理に切り替えれば30%速くなる', done:'API最適化完了。レスポンス改善' },
+      { name:'バグ修正', start:'ログに出てたエラーを直す', progress:'原因特定...タイムアウトだった', done:'バグ修正完了。エラー解消' },
+      { name:'テスト実行', start:'自動テスト走らせる', progress:'48テスト中...', done:'全テスト通過。問題なし' },
+    ],
+    hiro: [
+      { name:'インフラ監視', start:'サーバー監視スクリプトの改良', progress:'CPU使用率、メモリ、ディスク...全部正常', done:'監視スクリプト更新完了' },
+      { name:'n8nワークフロー更新', start:'n8nのワークフローを整理する', progress:'不要なフロー3つ削除...', done:'ワークフロー整理完了' },
+      { name:'ログ収集改良', start:'ログ収集の仕組みを改良する', progress:'JSON形式で統一して...', done:'ログ収集システム改良完了' },
+    ],
+    shukudai: [
+      { name:'宿題整理', start:'宿題一覧を整理する', progress:'未完了の宿題を担当者に振り分け中...', done:'宿題整理完了。全件担当者割り当て済み' },
+      { name:'宿題進捗確認', start:'各担当者の宿題進捗を確認', progress:'ひろゆき5件、あきら2件...', done:'進捗確認完了。遅延なし' },
+      { name:'宿題リマインド', start:'期限近い宿題のリマインド送信', progress:'3件のリマインドを準備中...', done:'リマインド送信完了' },
+    ],
+    kadai: [
+      { name:'課題起票', start:'新規課題を起票する', progress:'ダッシュボードのアラートから課題を抽出中...', done:'課題3件起票完了' },
+      { name:'課題追跡', start:'進行中の課題ステータスを更新', progress:'対応中の課題を各担当に確認中...', done:'課題ステータス更新完了' },
+      { name:'課題クローズ判定', start:'完了条件を満たした課題をチェック', progress:'涼晴の承認待ちが2件...', done:'課題2件クローズ' },
+    ],
   };
-  return T[id] || ['考え中...'];
+  return T[id] || [{ name:'作業中', start:'作業開始', progress:null, done:'完了' }];
+}
+
+// 後方互換（sayThoughtから呼ばれるケース用）
+function getThoughtsForMember(id) {
+  return getTasksForMember(id).map(t => t.start);
 }
 
 // ========== 会議 ==========
@@ -846,6 +955,66 @@ function addLog(member, msg, type) {
 
 function renderLogs() {
   const c = document.getElementById('log-container');
+
+  // タスクタブ → 宿題ベースのタスクボード表示
+  if (activeTab === 'task') {
+    const todoHw = homeworkData.filter(h => h.status !== 'done');
+    if (todoHw.length === 0) {
+      c.innerHTML = '<div style="color:#666;text-align:center;padding:20px">宿題なし</div>';
+      return;
+    }
+    c.innerHTML = todoHw.map(hw => {
+      const assignee = hw.assignee || '未定';
+      const memberId = Object.entries(ASSIGNEE_MAP).find(([k]) => assignee.includes(k));
+      const member = memberId && memberId[1] ? MEMBERS.find(m => m.id === memberId[1]) : null;
+      const char = member ? characters.find(ch => ch.member.id === member.id) : null;
+      const stIcon = char ? (char.state==='working'?'🟡':char.state==='meeting'?'🔴':'⚪') : '👤';
+      const stText = char ? (char.state==='working'?'作業中':char.state==='meeting'?'会議中':'待機中') : '人間';
+      const lastMsg = char && char.currentTask ? char.currentTask : '';
+      const color = member ? member.color : '#888';
+
+      return `<div class="log-entry task" style="border-left-color:${color}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="log-name" style="color:${color}">${member?member.emoji:'👤'} ${assignee}</div>
+          <span style="font-size:10px;color:#888">${stIcon} ${stText}</span>
+        </div>
+        <div class="log-msg" style="font-size:12px;color:#eee;margin:3px 0">📝 ${hw.title}</div>
+        ${hw.detail?'<div style="font-size:10px;color:#666">'+hw.detail+'</div>':''}
+        ${lastMsg && lastMsg !== hw.title ?'<div style="font-size:10px;color:#7fff7f;margin-top:2px">💬 「'+lastMsg.substring(0,40)+'」</div>':''}
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  // 課題タブ
+  if (activeTab === 'issue') {
+    const openIssues = issueData;
+    if (openIssues.length === 0) {
+      c.innerHTML = '<div style="color:#666;text-align:center;padding:20px">未対応の課題なし</div>';
+      return;
+    }
+    c.innerHTML = `<div style="font-size:10px;color:#ff8c00;padding:4px 0;border-bottom:1px solid #333;margin-bottom:6px">🔥 課題管理AIが${openIssues.length}件追跡中</div>` +
+    openIssues.map(issue => {
+      const assignee = issue.assignee || '未定';
+      const memberId = Object.entries(ASSIGNEE_MAP).find(([k]) => assignee.includes(k));
+      const member = memberId && memberId[1] ? MEMBERS.find(m => m.id === memberId[1]) : null;
+      const char = member ? characters.find(ch => ch.member.id === member.id) : null;
+      const stIcon = issue.status==='in_progress'?'🟡':'⚪';
+      const stText = issue.status==='in_progress'?'対応中':'未着手';
+      const color = member ? member.color : '#888';
+
+      return `<div class="log-entry" style="border-left:3px solid ${color}">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="log-name" style="color:${color}">${member?member.emoji:'👤'} ${assignee}</div>
+          <span style="font-size:10px;color:#888">${stIcon} ${stText}</span>
+        </div>
+        <div class="log-msg" style="font-size:12px;color:#eee;margin:3px 0">🔥 ${issue.title}</div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  // 通常のログ表示
   const f = logs.filter(l => {
     if (activeTab!=='all' && l.type!==activeTab) return false;
     if (memberFilters.size>0 && !memberFilters.has(l.member.id)) return false;
@@ -875,6 +1044,40 @@ function initFilters() {
   });
 }
 
+// ========== メンバーステータス一覧 ==========
+function renderRoster() {
+  const el = document.getElementById('member-roster');
+  const rows = characters.map(c => {
+    const stIcon = c.state==='working'?'🟡':c.state==='meeting'?'🔴':c.state==='walking'?'🚶':'⚪';
+    const stText = c.state==='working'?'作業中':c.state==='meeting'?'会議中':c.state==='walking'?'移動中':'待機中';
+    const hwCount = (c.homeworkList||[]).length;
+    const task = c.currentTask ? `<span style="color:#7fff7f;font-size:9px"> — ${c.currentTask.substring(0,25)}</span>` : '';
+    const hwBadge = hwCount > 0 ? `<span style="color:#e94560;font-size:9px;margin-left:2px">📝${hwCount}</span>` : '';
+    const room = c.currentRoom || '—';
+    return `<div style="display:flex;align-items:center;gap:6px;padding:3px 4px;border-bottom:1px solid #222;cursor:pointer;${c.state==='idle'?'opacity:0.5;':''}font-size:11px;" onclick="focusMember('${c.member.id}')">
+      <span style="width:14px">${stIcon}</span>
+      <span style="color:${c.member.color};min-width:90px">${c.member.emoji}${c.member.name}</span>
+      <span style="color:#888;font-size:10px">${stText}</span>
+      ${task}${hwBadge}
+    </div>`;
+  });
+  el.innerHTML = `<div style="font-size:10px;color:#ffd700;margin-bottom:4px;border-bottom:1px solid #444;padding-bottom:3px">メンバー状況</div>` + rows.join('');
+}
+
+function focusMember(id) {
+  const char = characters.find(c=>c.member.id===id);
+  if (!char) return;
+  selectedMember = char.member;
+  const detail = document.getElementById('member-detail');
+  detail.className = 'show';
+  const stLabel = char.state==='meeting'?'🔴 会議中':char.state==='working'?'🟡 作業中':char.state==='walking'?'🟢 移動中':'⚪ 待機中';
+  const hwList = (char.homeworkList||[]).map(h => `<div style="font-size:10px;color:#e94560;margin-top:2px">📝 ${h.title}</div>`).join('');
+  detail.innerHTML = `<h3>${char.member.emoji} ${char.member.name}</h3><div class="detail-role">${char.member.role} / ${char.member.team}チーム</div><div class="detail-status">状態: ${stLabel}</div><div style="font-size:11px;color:#888;margin-top:3px">場所: ${char.currentRoom||'外'} / 所属: ${char.member.homeRoom}</div>${char.currentTask?'<div style="font-size:11px;color:#7fff7f;margin-top:3px">作業中: '+char.currentTask+'</div>':''}${hwList?'<div style="margin-top:4px;border-top:1px solid #333;padding-top:3px;font-size:10px;color:#ffd700">担当宿題:</div>'+hwList:''}`;
+  memberFilters.clear(); memberFilters.add(id);
+  document.querySelectorAll('.filter-chip').forEach((c,i)=>c.classList.toggle('active',MEMBERS[i].id===id));
+  renderLogs();
+}
+
 // ========== クリック ==========
 function handleClick(e) {
   const rect = canvas.getBoundingClientRect();
@@ -899,8 +1102,96 @@ function handleClick(e) {
   }
 }
 
+// ========== 宿題連動 ==========
+let homeworkData = [];
+const ASSIGNEE_MAP = {
+  'あきら': 'akira', 'ひろゆき': 'hiro', '瀬戸さん': 'seto', '瀬戸': 'seto',
+  '営業AI': 'eigyo', 'マーケAI': 'marke', '審判AI': 'shinpan', '番頭': 'bantou',
+  '法務AI': 'houmu', 'RYOSEI': 'ryosei', '園田みのり': 'bantou', 'Gemini': 'ryosei',
+  '涼晴': null, // 涼晴は人間なので表示のみ
+  '宿題管理AI': 'shukudai', '課題管理AI': 'kadai',
+};
+
+let issueData = [];
+
+async function fetchHomework() {
+  try {
+    const res = await fetch('./dashboard_data.json?' + Date.now());
+    if (!res.ok) return;
+    const data = await res.json();
+    homeworkData = (data.homework || []).filter(h => h.status !== 'done');
+    issueData = (data.tasks || []).filter(t => t.status !== 'closed');
+    assignHomeworkToMembers();
+    assignIssuesToMembers();
+  } catch(e) { console.warn('宿題取得失敗:', e); }
+}
+
+function assignIssuesToMembers() {
+  // 課題管理AIに全課題を持たせる
+  const kadaiChar = characters.find(c => c.member.id === 'kadai');
+  if (kadaiChar) {
+    kadaiChar.homeworkList = issueData.map(i => ({title: i.title, assignee: i.assignee}));
+    if (issueData.length > 0 && kadaiChar.state === 'idle') {
+      kadaiChar.state = 'working';
+      kadaiChar.stateTimer = 400;
+      kadaiChar.currentTask = `課題${issueData.length}件を管理中`;
+      kadaiChar.showBubble(`課題${issueData.length}件追跡中...`);
+      kadaiChar.bubbleTimer = 200;
+    }
+  }
+  // 宿題管理AIにも
+  const shukudaiChar = characters.find(c => c.member.id === 'shukudai');
+  if (shukudaiChar) {
+    shukudaiChar.homeworkList = homeworkData;
+    if (homeworkData.length > 0 && shukudaiChar.state === 'idle') {
+      shukudaiChar.state = 'working';
+      shukudaiChar.stateTimer = 400;
+      shukudaiChar.currentTask = `宿題${homeworkData.length}件を整理中`;
+      shukudaiChar.showBubble(`宿題${homeworkData.length}件振り分け中...`);
+      shukudaiChar.bubbleTimer = 200;
+    }
+  }
+}
+
+function assignHomeworkToMembers() {
+  // 各メンバーの宿題を割り当て
+  characters.forEach(c => { c.homeworkList = []; });
+
+  homeworkData.forEach(hw => {
+    const assignee = hw.assignee || '';
+    // 複数担当（+区切り）対応
+    const names = assignee.split('+').map(s => s.trim());
+    names.forEach(name => {
+      const memberId = ASSIGNEE_MAP[name];
+      if (memberId) {
+        const char = characters.find(c => c.member.id === memberId);
+        if (char) char.homeworkList.push(hw);
+      }
+    });
+  });
+
+  // 宿題を持ってるメンバーは作業状態にして、宿題内容を喋る
+  characters.forEach(c => {
+    if (c.homeworkList.length > 0 && c.state === 'idle') {
+      const hw = c.homeworkList[0];
+      c.state = 'working';
+      c.stateTimer = 400 + Math.random() * 300;
+      c.currentTask = hw.title;
+      // 所属部屋に移動
+      const home = ROOMS.find(r => r.name === c.member.homeRoom);
+      if (home) {
+        c.targetX = (home.tx + 1 + Math.random() * (home.tw-2)) * TILE_SIZE;
+        c.targetY = (home.ty + 1 + Math.random() * (home.th-2)) * TILE_SIZE;
+      }
+      c.showBubble(hw.title.substring(0, 35) + '...対応中');
+      c.bubbleTimer = 250;
+      addLog(c.member, `📝 [宿題] ${hw.title}`, 'task');
+    }
+  });
+}
+
 // ========== スプレッドシート連携 ==========
-let LIVE_VIEW_API_URL = localStorage.getItem('liveViewApiUrl') || 'https://script.google.com/macros/s/AKfycbzSOxWuD3wJriJOaL6denNDYsK_hyeUroeYF2psWbwhL_pAMDXQOeCDeh4LziDJ6oIt/exec';
+let LIVE_VIEW_API_URL = localStorage.getItem('liveViewApiUrl') || 'https://script.google.com/macros/s/AKfycbw55IISrXs7I2d8zoRylm9yvMHtw2RUJu4ZfPm-e_KDVfaucdHSUzd5WlY0mQKl1NZJ/exec';
 
 window.setApiUrl = function(url) {
   LIVE_VIEW_API_URL = url;
@@ -910,20 +1201,27 @@ window.setApiUrl = function(url) {
 };
 
 async function fetchRealData() {
-  if (!LIVE_VIEW_API_URL) {
+  let gasOk = false, localOk = false;
+
+  // 1. GAS API（24時間データ）
+  if (LIVE_VIEW_API_URL) {
     try {
-      const res = await fetch('./live_data.json?' + Date.now());
-      if (res.ok) { processRealData(await res.json()); updateSync(true,'ローカル同期'); return; }
-    } catch(e) {}
-    updateSync(false,'シミュレーション中');
-    return;
+      const res = await fetch(LIVE_VIEW_API_URL + '?action=all');
+      if (res.ok) { processRealData(await res.json()); gasOk = true; }
+    } catch(e) { console.warn('GAS取得失敗:', e); }
   }
+
+  // 2. ローカルJSON（Claude Codeセッション中のリアルタイムデータ）
   try {
-    const res = await fetch(LIVE_VIEW_API_URL + '?action=all');
-    if (!res.ok) throw new Error('HTTP '+res.status);
-    processRealData(await res.json());
-    updateSync(true,'リアルタイム同期');
-  } catch(e) { console.warn('取得失敗:',e); updateSync(false,'オフライン'); }
+    const res = await fetch('./live_data.json?' + Date.now());
+    if (res.ok) { processRealData(await res.json()); localOk = true; }
+  } catch(e) {}
+
+  // ステータス表示
+  if (gasOk && localOk) updateSync(true, 'リアルタイム同期 + ローカル');
+  else if (gasOk) updateSync(true, 'リアルタイム同期');
+  else if (localOk) updateSync(true, 'ローカル同期');
+  else updateSync(false, 'オフライン');
 }
 
 function processRealData(data) {
@@ -999,28 +1297,59 @@ function init() {
   generateTileMap();
 
   // キャラクター配置（タイル座標）
+  // 初期配置: 各メンバーの所属部屋に配置
   const starts = [
-    {tx:3,ty:3},{tx:23,ty:2},{tx:25,ty:3},{tx:5,ty:3},{tx:13,ty:11},
-    {tx:23,ty:10},{tx:13,ty:17},{tx:3,ty:10},{tx:5,ty:11},
+    {tx:3,ty:3},   // RYOSEI → 社長室
+    {tx:23,ty:2},  // 営業AI → 営業フロア
+    {tx:25,ty:3},  // マーケAI → 営業フロア
+    {tx:5,ty:3},   // 瀬戸さん → 社長室
+    {tx:13,ty:11}, // 番頭 → 管理室
+    {tx:23,ty:10}, // 審判AI → レビュー室
+    {tx:26,ty:18}, // 法務AI → 待機場（非常勤）
+    {tx:3,ty:10},  // あきら → エンジニア部屋
+    {tx:5,ty:11},  // ひろゆき → エンジニア部屋
+    {tx:15,ty:11}, // 宿題管理AI → 管理室
+    {tx:16,ty:12}, // 課題管理AI → 管理室
   ];
   MEMBERS.forEach((m,i) => characters.push(new Character(m, starts[i].tx, starts[i].ty)));
 
   initFilters();
+  renderRoster();
   addLog({name:'SYSTEM',emoji:'⚔️',color:'#ffd700'}, 'AI組織ライブビュー起動 — 全メンバー稼働中', 'task');
 
   fetchRealData();
+  fetchHomework();
   setInterval(fetchRealData, 60000);
-  setInterval(triggerTask, 12000 + Math.random()*8000);
+  setInterval(fetchHomework, 30000); // 30秒おきに宿題更新
+  // シミュレーションは控えめに（実データ+宿題がメイン）
+  setInterval(triggerTask, 30000 + Math.random()*30000);
   setInterval(startMeeting, 50000 + Math.random()*40000);
   setTimeout(startMeeting, 6000);
 
   gameLoop();
 }
 
+// ========== サイドパネル開閉 ==========
+let panelOpen = true;
+function togglePanel() {
+  const panel = document.getElementById('side-panel');
+  const btn = document.getElementById('panel-toggle');
+  panelOpen = !panelOpen;
+  panel.style.display = panelOpen ? 'flex' : 'none';
+  btn.textContent = panelOpen ? '◀' : '▶';
+  // リサイズでcanvas再調整
+  setTimeout(() => {
+    const area = document.getElementById('map-area');
+    canvas.width = area.clientWidth;
+    canvas.height = area.clientHeight;
+  }, 50);
+}
+
 function gameLoop() {
   frameCount++;
   drawMap();
   characters.forEach(c=>{c.update();c.draw(ctx);});
+  if (frameCount % 60 === 0) renderRoster();
   requestAnimationFrame(gameLoop);
 }
 
