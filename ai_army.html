@@ -253,6 +253,7 @@ body {
       <button class="active" onclick="switchTab('all')">全ログ</button>
       <button onclick="switchTab('task')">📝宿題</button>
       <button onclick="switchTab('issue')">🔥課題</button>
+      <button onclick="switchTab('output')">🏆成果物</button>
       <button onclick="switchTab('meeting')">会議</button>
     </div>
     <div id="filter-bar"></div>
@@ -302,7 +303,8 @@ const ROOMS = [
   { name:'管理室', tx:11, ty:9, tw:7, th:5, floor:3, wallColor:'#205040' },
   { name:'レビュー室', tx:21, ty:8, tw:8, th:6, floor:3, wallColor:'#502020' },
   { name:'休憩所', tx:11, ty:16, tw:8, th:5, floor:3, wallColor:'#303030' },
-  { name:'待機場', tx:22, ty:16, tw:10, th:6, floor:1, wallColor:'#3a3a5a' },
+  { name:'待機場', tx:22, ty:16, tw:5, th:6, floor:1, wallColor:'#3a3a5a' },
+  { name:'成果物広場', tx:28, ty:16, tw:5, th:6, floor:3, wallColor:'#8a6a00' },
 ];
 
 // 家具配置（タイル座標）
@@ -999,8 +1001,10 @@ function renderLogs() {
       const memberId = Object.entries(ASSIGNEE_MAP).find(([k]) => assignee.includes(k));
       const member = memberId && memberId[1] ? MEMBERS.find(m => m.id === memberId[1]) : null;
       const char = member ? characters.find(ch => ch.member.id === member.id) : null;
-      const stIcon = issue.status==='in_progress'?'🟡':'⚪';
-      const stText = issue.status==='in_progress'?'対応中':'未着手';
+      // 担当者の状態に応じてステータスを動的判定
+      const charWorking = char && char.state === 'working';
+      const stIcon = issue.status==='in_progress'?'🟡': charWorking?'🟡': assignee&&assignee!=='未定'?'📋':'⚪';
+      const stText = issue.status==='in_progress'?'対応中': charWorking?'対応中': assignee&&assignee!=='未定'?'担当割当済':'未着手';
       const color = member ? member.color : '#888';
 
       return `<div class="log-entry" style="border-left:3px solid ${color}">
@@ -1009,6 +1013,37 @@ function renderLogs() {
           <span style="font-size:10px;color:#888">${stIcon} ${stText}</span>
         </div>
         <div class="log-msg" style="font-size:12px;color:#eee;margin:3px 0">🔥 ${issue.title}</div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  // 成果物タブ
+  if (activeTab === 'output') {
+    if (outputData.length === 0) {
+      c.innerHTML = '<div style="color:#666;text-align:center;padding:20px">成果物はまだありません</div>';
+      return;
+    }
+    c.innerHTML = `<div style="font-size:10px;color:#ffd700;padding:4px 0;border-bottom:1px solid #333;margin-bottom:6px">🏆 成果物一覧（${outputData.length}件）— クリックで詳細</div>` +
+    outputData.slice(0, 30).map((item, idx) => {
+      const assignee = item.assignee || '不明';
+      const memberId = Object.entries(ASSIGNEE_MAP).find(([k]) => assignee.includes(k));
+      const member = memberId && memberId[1] ? MEMBERS.find(m => m.id === memberId[1]) : null;
+      const color = member ? member.color : '#888';
+      const detail = item.detail || '';
+      const needsReview = detail.includes('確認') || detail.includes('レビュー');
+
+      return `<div class="log-entry" style="border-left:3px solid ${needsReview ? '#ffd700' : '#53d769'};cursor:pointer" onclick="toggleOutputDetail(${idx})">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="log-name" style="color:${color}">${member?member.emoji:'👤'} ${assignee}</div>
+          <span style="font-size:10px;color:${needsReview?'#ffd700':'#53d769'}">${needsReview?'⚠️ 要確認':'✅ 完了'}</span>
+        </div>
+        <div class="log-msg" style="font-size:12px;color:#eee;margin:3px 0">🏆 ${item.title}</div>
+        <div id="output-detail-${idx}" style="display:none;margin-top:4px;padding-top:4px;border-top:1px solid #333">
+          ${detail?'<div style="font-size:10px;color:#aaa;margin-bottom:3px">📋 '+detail+'</div>':''}
+          <div style="font-size:10px;color:#888">担当: ${assignee}</div>
+          ${needsReview?'<div style="font-size:10px;color:#ffd700;margin-top:2px">⚠️ 涼晴の確認が必要</div>':''}
+        </div>
       </div>`;
     }).join('');
     return;
@@ -1113,6 +1148,12 @@ const ASSIGNEE_MAP = {
 };
 
 let issueData = [];
+let outputData = [];
+
+function toggleOutputDetail(idx) {
+  const el = document.getElementById('output-detail-' + idx);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
 
 async function fetchHomework() {
   try {
@@ -1121,6 +1162,7 @@ async function fetchHomework() {
     const data = await res.json();
     homeworkData = (data.homework || []).filter(h => h.status !== 'done');
     issueData = (data.tasks || []).filter(t => t.status !== 'closed');
+    outputData = (data.completed || []).slice(0, 30);
     assignHomeworkToMembers();
     assignIssuesToMembers();
   } catch(e) { console.warn('宿題取得失敗:', e); }
